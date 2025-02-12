@@ -1,0 +1,1 @@
+// Purpose: The entry point for the React app. It renders the main <App /> component and sets up any global providers.

@@ -1,0 +1,2 @@
+[comment]: <> (Purpose: Documentation detailing the system architecture, design decisions, actor interactions, and data flow.)
+[comment]: <> (Contents: Diagrams, technology choices, and justifications—valuable for both your thesis and future maintainers.)

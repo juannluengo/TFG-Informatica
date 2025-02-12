@@ -1,0 +1,1 @@
+// smart contract(s) that handle the issuance, verification, and management of academic credentials.

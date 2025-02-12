@@ -1,0 +1,1 @@
+// Purpose: Wraps the IPFS client functionality (using ipfs-http-client) to abstract away details of connecting and interacting with IPFS.

@@ -1,0 +1,1 @@
+// Purpose: Defines API endpoints for IPFS interactions (uploading files, retrieving file metadata, etc.).

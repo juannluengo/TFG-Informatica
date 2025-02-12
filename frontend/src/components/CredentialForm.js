@@ -1,0 +1,1 @@
+// Purpose: Contains React components like forms to issue credentials, display academic records, or verify credentials.

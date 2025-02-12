@@ -1,0 +1,1 @@
+// Purpose: The main React component that defines the overall structure of your application.

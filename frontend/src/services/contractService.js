@@ -1,0 +1,1 @@
+// Purpose: Contains functions to interact with your deployed smart contracts using ethers.js (e.g., connecting to the provider, calling contract methods, handling events).
