@@ -1,0 +1,14 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "main": "simulateWorkflow.js",
+  "scripts": {
+    "start": "cross-env PRIVATE_KEY=your-private-key-here node simulateWorkflow.js"
+  },
+  "type": "module",
+  "dependencies": {
+    "config": "^3.3.12",
+    "cross-env": "^7.0.3",
+    "ethers": "^6.13.5"
+  }
+}
