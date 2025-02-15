@@ -4,10 +4,10 @@ import { Link as RouterLink } from 'react-router-dom';
 import { useWeb3 } from '../contexts/Web3Context';
 
 function Navigation() {
-  const { account, isAdmin } = useWeb3();
+  const { account, isAdmin, networkError } = useWeb3();
 
   return (
-    <AppBar position="static">
+    <AppBar position="fixed" sx={{ top: networkError ? '40px' : 0, transition: 'top 0.3s ease-in-out' }}>
       <Toolbar>
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
           UPM Academic Records

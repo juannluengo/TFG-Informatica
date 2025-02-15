@@ -203,6 +203,79 @@ cd frontend
 npm start
 ```
 
+## Running the Frontend Application
+
+### Prerequisites
+- MetaMask wallet installed in your browser
+- Local Hardhat node running
+- Smart contracts deployed
+- Node.js and npm installed
+
+### Steps to Run the Frontend
+
+1. Make sure you have MetaMask installed and connected to your local Hardhat network:
+   - Network Name: Hardhat Local
+   - RPC URL: http://127.0.0.1:8545
+   - Chain ID: 31337
+   - Currency Symbol: ETH
+
+2. Import a test account to MetaMask:
+   - Use one of the private keys provided by Hardhat when you start the local node
+   - These accounts come pre-loaded with test ETH
+
+3. Navigate to the frontend directory:
+```bash
+cd frontend
+```
+
+4. Install dependencies (if not done already):
+```bash
+npm install
+```
+
+5. Start the development server:
+```bash
+npm start
+```
+
+6. Open your browser and navigate to:
+```
+http://localhost:3000
+```
+
+7. Connect your MetaMask wallet when prompted by the application
+
+### Using the Application
+
+1. **View Credentials:**
+   - Navigate to the "View Credentials" page
+   - Enter an Ethereum address or leave blank to view your own credentials
+   - Click "View Credentials" to see all academic records
+
+2. **Verify Credentials:**
+   - Go to the "Verify Credentials" page
+   - Enter the student's address and credential index
+   - Input the academic record data
+   - Click "Verify" to check the credential's authenticity
+
+3. **Issue Credentials (Admin Only):**
+   - Connect with an admin account
+   - Navigate to "Issue Credential"
+   - Fill in the student's address and credential details
+   - Submit to issue the credential
+
+### Troubleshooting Frontend Issues
+
+- If the app can't connect to the blockchain:
+  - Ensure your local Hardhat node is running
+  - Verify MetaMask is connected to the correct network
+  - Check if the contract address in the frontend matches your deployed contract
+
+- If transactions fail:
+  - Make sure you have enough test ETH in your account
+  - Verify you're using the correct account (admin for restricted functions)
+  - Check the browser console for detailed error messages
+
 ## Testing
 
 1. Run smart contract tests:
