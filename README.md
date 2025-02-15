@@ -78,3 +78,44 @@ The project is structured into two main phases:
   - **2.3 Testing & Security:**  
     Write unit tests to simulate real-world interactions and implement security measures like role-based permissions and EIP-712 signatures for off-chain verification.
 
+
+
+# Project Setup and Testing
+
+## Prerequisites
+- [Node.js](https://nodejs.org/en/) installed
+
+## Setup
+- From the project root, install dependencies:
+  ```bash
+  npm install
+  ```
+
+## Hardhat Toolbox Dependencies
+To enable all features of @nomicfoundation/hardhat-toolbox, install the following dependencies:
+```bash
+npm install --save-dev "@nomicfoundation/hardhat-chai-matchers@^2.0.0" "@nomicfoundation/hardhat-ethers@^3.0.0" "@nomicfoundation/hardhat-ignition-ethers@^0.15.0" "@nomicfoundation/hardhat-network-helpers@^1.0.0" "@nomicfoundation/hardhat-verify@^2.0.0" "@typechain/ethers-v6@^0.5.0" "@typechain/hardhat@^9.0.0" "@types/chai@^4.2.0" "@types/mocha@>=9.1.0" "hardhat-gas-reporter@^1.0.8" "solidity-coverage@^0.8.1" "ts-node@>=8.0.0" "typechain@^8.3.0" "typescript@>=4.5.0"
+```
+
+## Installing Hardhat Toolbox Dependencies
+If you encounter dependency conflicts during installation, try:
+```bash
+npm install --save-dev "@nomicfoundation/hardhat-chai-matchers@^2.0.0" "@nomicfoundation/hardhat-ethers@^3.0.0" "@nomicfoundation/hardhat-ignition-ethers@^0.15.0" "@nomicfoundation/hardhat-network-helpers@^1.0.0" "@nomicfoundation/hardhat-verify@^2.0.0" "@typechain/ethers-v6@^0.5.0" "@typechain/hardhat@^9.0.0" "@types/chai@^4.2.0" "@types/mocha@>=9.1.0" "hardhat-gas-reporter@^1.0.8" "solidity-coverage@^0.8.1" "ts-node@>=8.0.0" "typechain@^8.3.0" "typescript@>=4.5.0" --legacy-peer-deps
+```
+
+Alternatively, update your project's Chai version to one compatible with these dependencies (Chai ^4.2.0).
+
+## Installing Ignition Dependencies
+If you encounter an error related to @nomicfoundation/hardhat-ignition-ethers, install the following:
+```bash
+npm install --save-dev "@nomicfoundation/ignition-core@^0.15.9" "@nomicfoundation/hardhat-ignition@^0.15.9" --legacy-peer-deps
+```
+Or without the flag if no conflicts arise.
+
+## Running Tests
+- To run the tests, execute:
+  ```bash
+  npx hardhat test
+  ```
+- This command deploys the contract to a local Hardhat network and executes the test suite in the `/test` directory.
+

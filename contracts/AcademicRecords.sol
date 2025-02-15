@@ -43,6 +43,16 @@ contract AcademicRecords is AccessControl {
         uint256 timestamp
     );
 
+    // New event to track updates to credentials.
+    event CredentialUpdated(
+        address indexed student,
+        uint256 indexed index,
+        address indexed updater,
+        bytes32 newRecordHash,
+        string newIpfsHash,
+        uint256 timestamp
+    );
+
     /**
      * @dev Constructor.
      *      Sets the deployer as the default admin and grants them the ADMIN_ROLE.
@@ -110,6 +120,33 @@ contract AcademicRecords is AccessControl {
 
         cred.valid = false;
         emit CredentialRevoked(student, index, msg.sender, block.timestamp);
+    }
+
+    /**
+     * @dev Updates an existing academic credential.
+     * @param student The address of the student.
+     * @param index The index of the credential to update.
+     * @param newRecordHash The new cryptographic hash of the updated academic record.
+     * @param newIpfsHash The new IPFS pointer for the updated academic record.
+     * Requirements:
+     * - Caller must have ADMIN_ROLE.
+     * - The credential must exist and be valid.
+     */
+    function updateCredential(
+        address student,
+        uint256 index,
+        bytes32 newRecordHash,
+        string memory newIpfsHash
+    ) external onlyRole(ADMIN_ROLE) {
+        require(index < credentials[student].length, "Invalid credential index");
+        Credential storage cred = credentials[student][index];
+        require(cred.valid, "Credential revoked, cannot update");
+
+        cred.recordHash = newRecordHash;
+        cred.ipfsHash = newIpfsHash;
+        cred.timestamp = block.timestamp; // update timestamp to record update time
+
+        emit CredentialUpdated(student, index, msg.sender, newRecordHash, newIpfsHash, block.timestamp);
     }
 
     /**
