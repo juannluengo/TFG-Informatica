@@ -78,8 +78,6 @@ The project is structured into two main phases:
   - **2.3 Testing & Security:**  
     Write unit tests to simulate real-world interactions and implement security measures like role-based permissions and EIP-712 signatures for off-chain verification.
 
-
-
 # Project Setup and Testing
 
 ## Prerequisites
@@ -118,4 +116,216 @@ Or without the flag if no conflicts arise.
   npx hardhat test
   ```
 - This command deploys the contract to a local Hardhat network and executes the test suite in the `/test` directory.
+
+# Complete Setup and Running Guide
+
+## Prerequisites
+- Node.js (v16 or higher)
+- Git
+- MetaMask wallet (for testing)
+
+## Project Structure
+```
+├── artifacts/          # Compiled contract artifacts
+├── backend/           # Node.js backend server
+├── contracts/         # Solidity smart contracts
+├── frontend/          # React frontend application
+├── scripts/          # Deployment and migration scripts
+└── test/             # Contract test files
+```
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone <your-repo-url>
+cd TFG-Informatica
+```
+
+2. Install root project dependencies:
+```bash
+npm install
+```
+
+3. Install backend dependencies:
+```bash
+cd backend
+npm install
+```
+
+4. Install frontend dependencies:
+```bash
+cd ../frontend
+npm install
+```
+
+## Configuration
+
+1. Create a .env file in the project root:
+```bash
+# Local Hardhat Network
+HARDHAT_NETWORK=localhost
+PRIVATE_KEY=your_private_key_here  # Your Ethereum wallet private key
+```
+
+2. Update backend/config/default.json with your network configuration:
+```json
+{
+    "blockchain": {
+        "rpcUrl": "http://127.0.0.1:8545",
+        "contractAddress": "your_deployed_contract_address"
+    }
+}
+```
+
+## Running the Project
+
+1. Start a local Hardhat node:
+```bash
+npx hardhat node
+```
+
+2. Deploy the smart contracts (in a new terminal):
+```bash
+npx hardhat run scripts/deploy.js --network localhost
+```
+- Copy the deployed contract address and update it in backend/config/default.json
+
+3. Run the backend server:
+```bash
+cd backend
+npm start
+```
+
+4. Start the frontend application:
+```bash
+cd frontend
+npm start
+```
+
+## Testing
+
+1. Run smart contract tests:
+```bash
+npx hardhat test
+```
+
+2. Run backend tests:
+```bash
+cd backend
+npm test
+```
+
+3. Run frontend tests:
+```bash
+cd frontend
+npm test
+```
+
+## Workflow Simulation
+
+To test the complete workflow:
+
+1. Ensure the local Hardhat node is running
+2. Export your private key (from MetaMask or Hardhat account):
+```bash
+export PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+```
+
+3. Run the simulation:
+```bash
+cd backend
+node simulateWorkflow.js
+```
+
+## Common Issues and Solutions
+
+### Contract Deployment Fails
+- Ensure you have sufficient ETH in your account
+- Check that the network RPC URL is correct
+- Verify Hardhat network is running
+
+### Transaction Errors
+- Check that you're using the correct contract address
+- Ensure your wallet has the ADMIN_ROLE for restricted functions
+- Verify gas settings in hardhat.config.js
+
+### IPFS Connection Issues
+- Ensure IPFS daemon is running locally or use a public gateway
+- Check IPFS configuration in backend/config/default.json
+
+## Working with the Smart Contract
+
+### Key Functions
+
+1. Issuing Credentials:
+```javascript
+const tx = await contract.issueCredential(
+    studentAddress,
+    recordHash,
+    ipfsHash
+);
+```
+
+2. Verifying Credentials:
+```javascript
+const isValid = await contract.verifyCredential(
+    studentAddress,
+    credentialIndex,
+    recordHash
+);
+```
+
+3. Revoking Credentials:
+```javascript
+const tx = await contract.revokeCredential(
+    studentAddress,
+    credentialIndex
+);
+```
+
+### Events to Monitor
+
+- CredentialIssued: Emitted when a new credential is issued
+- CredentialRevoked: Emitted when a credential is revoked
+- CredentialUpdated: Emitted when a credential is updated
+
+## Deploying to Other Networks
+
+1. Update hardhat.config.js with your network configuration:
+```javascript
+networks: {
+    goerli: {
+      url: `https://goerli.infura.io/v3/${INFURA_PROJECT_ID}`,
+      accounts: [PRIVATE_KEY]
+    }
+}
+```
+
+2. Deploy to the selected network:
+```bash
+npx hardhat run scripts/deploy.js --network goerli
+```
+
+3. Update the contract address in your configuration files
+
+## Security Considerations
+
+- Never commit private keys or sensitive configuration
+- Use .env files for sensitive data
+- Implement rate limiting for API endpoints
+- Follow Role-Based Access Control (RBAC) best practices
+- Regularly update dependencies for security patches
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a new Pull Request
+
+## License
+
+MIT
 
