@@ -21,6 +21,9 @@ function Navigation() {
               Issue Credential
             </Button>
           )}
+          <Button color="inherit" component={RouterLink} to="/add">
+            Add Credential
+          </Button>
           <Button color="inherit" component={RouterLink} to="/verify">
             Verify Credential
           </Button>

@@ -167,6 +167,25 @@ contract AcademicRecords is AccessControl {
     }
 
     /**
+     * @dev Gets the IPFS hash of a credential given the student address, index, and record hash.
+     * @param student The address of the student.
+     * @param index The index of the credential.
+     * @param recordHash The hash to verify against.
+     * @return The IPFS hash of the credential if it exists and matches, reverts otherwise.
+     */
+    function getCredentialDataByHash(
+        address student,
+        uint256 index,
+        bytes32 recordHash
+    ) external view returns (string memory) {
+        require(index < credentials[student].length, "Invalid credential index");
+        Credential memory cred = credentials[student][index];
+        require(cred.valid, "Credential is revoked");
+        require(cred.recordHash == recordHash, "Record hash does not match");
+        return cred.ipfsHash;
+    }
+
+    /**
      * @dev Returns the number of credentials associated with a student.
      * @param student The address of the student.
      * @return The count of credentials.

@@ -7,6 +7,7 @@ import { createTheme } from '@mui/material/styles';
 import Navigation from './components/Navigation';
 import Home from './components/Home';
 import IssueCredential from './components/IssueCredential';
+import AddCredential from './components/AddCredential';
 import VerifyCredential from './components/VerifyCredential';
 import ViewCredentials from './components/ViewCredentials';
 import Web3Provider, { useWeb3 } from './contexts/Web3Context';
@@ -35,6 +36,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/issue" element={<IssueCredential />} />
+          <Route path="/add" element={<AddCredential />} />
           <Route path="/verify" element={<VerifyCredential />} />
           <Route path="/view" element={<ViewCredentials />} />
         </Routes>

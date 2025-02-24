@@ -607,6 +607,9 @@ cd frontend
 npm start
 ```
 
+### 4.3 Add Credentials to the user
+npx hardhat run scripts/addTestCredentials.js --network localhost
+
 ## 5. Configure MetaMask
 
 1. Install MetaMask browser extension if you haven't already

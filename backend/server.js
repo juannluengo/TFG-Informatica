@@ -7,8 +7,14 @@ import ipfsRoutes from './routes/ipfsRoutes.js';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Configure CORS
+app.use(cors({
+    origin: 'http://localhost:3000', // Frontend URL
+    methods: ['GET', 'POST'],
+    credentials: true
+}));
+
 // Middleware
-app.use(cors());
 app.use(express.json());
 
 // Routes
@@ -17,6 +23,15 @@ app.use('/api/ipfs', ipfsRoutes);
 // Basic health check endpoint
 app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(500).json({ 
+        success: false, 
+        error: err.message || 'Internal Server Error'
+    });
 });
 
 app.listen(PORT, () => {
