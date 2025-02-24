@@ -41,10 +41,14 @@ async function main() {
 
   console.log("Adding test credentials to address:", studentAddress);
 
-  for (const cred of credentials) {
+  for (let i = 0; i < credentials.length; i++) {
+    const cred = credentials[i];
     try {
+      // Add index to make each credential unique
+      const uniqueData = { ...cred, index: i };
+      
       // First upload the full credential data to IPFS
-      const ipfsHash = await uploadToIpfs(cred);
+      const ipfsHash = await uploadToIpfs(uniqueData);
       console.log(`✓ Uploaded to IPFS with hash: ${ipfsHash}`);
 
       // Create hash of the credential data

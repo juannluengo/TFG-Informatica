@@ -39,69 +39,55 @@ function VerifyCredential() {
       
       try {
         const credential = await contract.getCredential(formData.studentAddress, credentialIndex);
-        console.log('Credential found:', credential);
+        console.log('Credential found:', {
+          recordHash: credential.recordHash,
+          ipfsHash: credential.ipfsHash,
+          timestamp: credential.timestamp.toString(),
+          issuer: credential.issuer,
+          valid: credential.valid
+        });
         
         if (!credential.valid) {
           throw new Error('This credential has been revoked');
         }
 
-        // Ensure recordHash is a proper 0x-prefixed 32-byte hex string
-        let recordHash = formData.recordHash;
-        if (!recordHash.startsWith('0x') || recordHash.length !== 66) {
-          recordHash = ethers.keccak256(ethers.toUtf8Bytes(formData.recordHash));
-        }
+        // Compare the provided hash directly with the stored hash
+        const providedHash = formData.recordHash.toLowerCase();
+        const storedHash = credential.recordHash.toLowerCase();
 
         console.log('Comparing hashes:', {
-          provided: recordHash,
-          stored: credential.recordHash
+          provided: providedHash,
+          stored: storedHash
         });
 
-        if (recordHash !== credential.recordHash) {
-          throw new Error('Record hash does not match the stored credential');
+        if (providedHash !== storedHash) {
+          throw new Error('Provided hash does not match the stored credential');
         }
 
-        // If we get here, we know the credential exists and the hash matches
+        // If hashes match, fetch the data from IPFS
         const ipfsHash = credential.ipfsHash;
         console.log('Fetching from IPFS hash:', ipfsHash);
 
-        try {
-          const response = await fetch(`${API_URL}/api/ipfs/${ipfsHash}`);
-          console.log('IPFS response:', {
-            status: response.status,
-            ok: response.ok
-          });
-          
-          if (!response.ok) {
-            const errorData = await response.json();
-            console.error('IPFS error details:', errorData);
-            throw new Error(errorData.error || 'Failed to fetch data from IPFS');
-          }
-          
-          let data = await response.text();
-          
-          // Try to parse as JSON if possible
-          try {
-            const jsonData = JSON.parse(data);
-            data = typeof jsonData === 'string' ? jsonData : JSON.stringify(jsonData, null, 2);
-          } catch (e) {
-            // If it's not JSON, use the raw text
-            console.log('Data is not JSON, using raw text');
-          }
-          
-          console.log('IPFS data received:', data);
-          
-          setVerifiedData(data);
-          setStatus({
-            type: 'success',
-            message: 'Credential verified successfully!'
-          });
-        } catch (ipfsError) {
-          console.error('IPFS fetch error:', ipfsError);
-          setStatus({
-            type: 'error',
-            message: ipfsError.message || 'Failed to fetch credential data'
-          });
+        const response = await fetch(`${API_URL}/api/ipfs/${ipfsHash}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch data from IPFS');
         }
+
+        let data = await response.text();
+        try {
+          const jsonData = JSON.parse(data);
+          data = typeof jsonData === 'string' ? jsonData : JSON.stringify(jsonData, null, 2);
+        } catch (e) {
+          // If it's not JSON, use the raw text
+          console.log('Data is not JSON, using raw text');
+        }
+
+        setVerifiedData(data);
+        setStatus({
+          type: 'success',
+          message: 'Credential verified successfully!'
+        });
+
       } catch (error) {
         if (error.message.includes("Invalid credential index")) {
           throw new Error('No credential exists at this index for the given address');
@@ -164,7 +150,7 @@ function VerifyCredential() {
             required
             sx={{ mb: 3 }}
             placeholder="0x..."
-            helperText="Enter the keccak256 hash of the academic record"
+            helperText="Enter the exact keccak256 hash stored on the blockchain"
           />
           <Box sx={{ position: 'relative' }}>
             <Button
