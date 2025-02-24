@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 
 async function main() {
-  const studentAddress = "0x91325d3dd98090b7148e41ee7b867e15b2b8210b";
+  const studentAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
   
   // Get the contract
   const AcademicRecords = await ethers.getContractFactory("AcademicRecords");

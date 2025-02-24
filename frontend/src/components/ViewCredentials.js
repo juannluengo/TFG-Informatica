@@ -18,34 +18,65 @@ import {
 import { useWeb3 } from '../contexts/Web3Context';
 
 function ViewCredentials() {
-  const { contract, account } = useWeb3();
+  const { contract, account, loading: web3Loading, networkError } = useWeb3();
   const [credentials, setCredentials] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [addressToView, setAddressToView] = useState('');
 
   const loadCredentials = async (address) => {
+    if (!contract) {
+      console.log('Contract not initialized yet');
+      setError('Web3 connection not initialized yet. Please wait...');
+      return;
+    }
+    
     setLoading(true);
     setError('');
+    
     try {
       const targetAddress = address || account;
-      const count = await contract.getCredentialCount(targetAddress);
-      const credentialPromises = [];
+      console.log('Loading credentials for address:', targetAddress);
+      
+      if (!targetAddress) {
+        throw new Error('No address provided and no account connected');
+      }
 
-      for (let i = 0; i < count; i++) {
-        credentialPromises.push(contract.getCredential(targetAddress, i));
+      console.log('Getting credential count...');
+      const count = await contract.getCredentialCount(targetAddress);
+      const countNum = Number(count);
+      console.log('Credential count:', countNum);
+      
+      if (countNum === 0) {
+        console.log('No credentials found for address');
+        setCredentials([]);
+        setLoading(false);
+        return;
+      }
+      
+      const credentialPromises = [];
+      for (let i = 0; i < countNum; i++) {
+        console.log(`Fetching credential at index ${i}`);
+        credentialPromises.push(
+          contract.getCredential(targetAddress, i)
+            .then(cred => ({
+              index: i,
+              recordHash: cred.recordHash,
+              ipfsHash: cred.ipfsHash,
+              issuer: cred.issuer,
+              timestamp: new Date(Number(cred.timestamp) * 1000).toLocaleString(),
+              valid: cred.valid
+            }))
+            .catch(error => {
+              console.error(`Error fetching credential at index ${i}:`, error);
+              return null;
+            })
+        );
       }
 
       const results = await Promise.all(credentialPromises);
-      const formattedCredentials = results.map((cred, index) => ({
-        index,
-        recordHash: cred.recordHash,
-        ipfsHash: cred.ipfsHash,
-        issuer: cred.issuer,
-        timestamp: new Date(Number(cred.timestamp) * 1000).toLocaleString(),
-        valid: cred.valid
-      }));
-
+      const formattedCredentials = results.filter(cred => cred !== null);
+      console.log('Formatted credentials:', formattedCredentials);
       setCredentials(formattedCredentials);
     } catch (error) {
       console.error('Error loading credentials:', error);
@@ -55,18 +86,61 @@ function ViewCredentials() {
     }
   };
 
+  // Load credentials when contract and account are ready
   useEffect(() => {
-    if (contract && account) {
-      loadCredentials();
-    }
-  }, [contract, account]);
+    const initializeAndLoad = async () => {
+      if (web3Loading) {
+        console.log('Web3 still loading...');
+        return;
+      }
+      
+      if (!contract) {
+        console.log('Contract not ready...');
+        return;
+      }
+      
+      if (!account) {
+        console.log('Account not ready...');
+        return;
+      }
+      
+      console.log('Web3 initialized, loading credentials...');
+      await loadCredentials(addressToView || account);
+    };
 
-  const handleAddressSubmit = (e) => {
+    initializeAndLoad();
+  }, [contract, account, web3Loading]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (addressToView) {
-      loadCredentials(addressToView);
+    if (web3Loading) {
+      setError('Please wait for Web3 to initialize...');
+      return;
     }
+    if (!contract) {
+      setError('Please wait for contract to initialize...');
+      return;
+    }
+    await loadCredentials(addressToView);
   };
+
+  const buttonDisabled = loading || web3Loading || !contract || networkError;
+  const getButtonTooltip = () => {
+    if (loading) return 'Loading credentials...';
+    if (web3Loading) return 'Initializing Web3...';
+    if (!contract) return 'Waiting for contract connection...';
+    if (networkError) return networkError;
+    return '';
+  };
+
+  if (web3Loading) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
+        <CircularProgress />
+        <Typography sx={{ mt: 2 }}>Initializing Web3...</Typography>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -75,7 +149,7 @@ function ViewCredentials() {
           View Academic Credentials
         </Typography>
 
-        <Box component="form" onSubmit={handleAddressSubmit} sx={{ mb: 4 }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mb: 4 }}>
           <TextField
             fullWidth
             label="Enter Ethereum Address (optional)"
@@ -83,12 +157,35 @@ function ViewCredentials() {
             onChange={(e) => setAddressToView(e.target.value)}
             sx={{ mb: 2 }}
           />
-          <Button type="submit" variant="contained">
-            View Credentials
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button 
+              type="submit" 
+              variant="contained"
+              disabled={buttonDisabled}
+              title={getButtonTooltip()}
+            >
+              {loading ? 'Loading...' : 'View Credentials'}
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setAddressToView('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266');
+                loadCredentials('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266');
+              }}
+              disabled={buttonDisabled}
+            >
+              Load Test Account
+            </Button>
+          </Box>
         </Box>
 
-        {error && (
+        {networkError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {networkError}
+          </Alert>
+        )}
+        
+        {error && !networkError && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>

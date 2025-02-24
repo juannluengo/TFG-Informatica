@@ -16,54 +16,70 @@ export default function Web3Provider({ children }) {
   const [loading, setLoading] = useState(true);
   const [networkError, setNetworkError] = useState(null);
 
+  const initializeContract = async (signer) => {
+    try {
+      const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS || "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+      console.log('Contract address being used:', contractAddress);
+      
+      if (!AcademicRecordsArtifact.abi) {
+        throw new Error('Contract ABI not found');
+      }
+
+      const contract = new ethers.Contract(
+        contractAddress,
+        AcademicRecordsArtifact.abi,
+        signer
+      );
+
+      // Test if we can actually call contract methods
+      try {
+        const count = await contract.getCredentialCount(await signer.getAddress());
+        console.log('Successfully tested contract with getCredentialCount:', count.toString());
+        return contract;
+      } catch (error) {
+        console.error('Failed to test contract method:', error);
+        throw new Error('Contract method test failed - check if contract is deployed correctly');
+      }
+    } catch (error) {
+      console.error('Failed to initialize contract:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     const init = async () => {
       try {
         if (typeof window.ethereum !== 'undefined') {
-          // Request account access
           const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
           const account = accounts[0];
+          console.log('Connected account:', account);
           setAccount(account);
 
-          // Check if we're on the correct network (Hardhat local network)
-          const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-          if (chainId !== '0x7A69') { // 31337 in hex
-            setNetworkError('Please connect to Hardhat Local network (Chain ID: 31337)');
-            return;
-          }
-
-          // Create provider and contract instances
+          // Create provider first
           const provider = new ethers.BrowserProvider(window.ethereum);
           setProvider(provider);
           
-          const signer = await provider.getSigner();
-          const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
+          // Get network information
+          const network = await provider.getNetwork();
+          const chainId = network.chainId;
+          console.log('Current chain ID:', chainId);
           
-          if (!contractAddress) {
-            throw new Error('Contract address not configured');
+          if (chainId !== 31337n) {
+            setNetworkError('Please connect to Hardhat Local network (Chain ID: 31337)');
+            setLoading(false);
+            return;
           }
-
-          const contract = new ethers.Contract(
-            contractAddress,
-            AcademicRecordsArtifact.abi,
-            signer
-          );
-
+          setNetworkError(null);
+          
+          // Get signer and initialize contract
+          const signer = await provider.getSigner();
+          const contract = await initializeContract(signer);
           setContract(contract);
 
-          // Check if user is admin
-          const adminRole = await contract.ADMIN_ROLE();
-          const isAdmin = await contract.hasRole(adminRole, account);
-          setIsAdmin(isAdmin);
-
-          // Listen for account changes
-          window.ethereum.on('accountsChanged', (accounts) => {
-            setAccount(accounts[0]);
-          });
-
-          // Listen for chain changes
+          // Event listeners for network and account changes
           window.ethereum.on('chainChanged', (chainId) => {
-            if (chainId !== '0x7A69') { // 31337 in hex
+            const chainIdNum = BigInt(chainId);
+            if (chainIdNum !== 31337n) {
               setNetworkError('Please connect to Hardhat Local network (Chain ID: 31337)');
             } else {
               setNetworkError(null);
@@ -71,6 +87,12 @@ export default function Web3Provider({ children }) {
             window.location.reload();
           });
 
+          window.ethereum.on('accountsChanged', (accounts) => {
+            window.location.reload();
+          });
+
+        } else {
+          throw new Error('MetaMask not installed');
         }
       } catch (error) {
         console.error('Failed to initialize Web3:', error);
@@ -81,6 +103,12 @@ export default function Web3Provider({ children }) {
     };
 
     init();
+    return () => {
+      if (window.ethereum) {
+        window.ethereum.removeListener('chainChanged', () => {});
+        window.ethereum.removeListener('accountsChanged', () => {});
+      }
+    };
   }, []);
 
   const value = {

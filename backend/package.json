@@ -1,14 +1,25 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "simulateWorkflow.js",
+  "main": "server.js",
   "scripts": {
-    "start": "cross-env PRIVATE_KEY=your-private-key-here node simulateWorkflow.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "simulate": "cross-env PRIVATE_KEY=your-private-key-here node simulateWorkflow.js",
+    "test": "mocha --timeout 10000 '**/*.test.js'"
   },
   "type": "module",
   "dependencies": {
     "config": "^3.3.12",
+    "cors": "^2.8.5",
     "cross-env": "^7.0.3",
-    "ethers": "^6.13.5"
+    "ethers": "^6.13.5",
+    "express": "^4.21.2",
+    "ipfs-http-client": "^60.0.1"
+  },
+  "devDependencies": {
+    "chai": "^4.5.0",
+    "mocha": "^10.8.2",
+    "supertest": "^6.3.4"
   }
 }

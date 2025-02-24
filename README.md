@@ -295,6 +295,12 @@ cd frontend
 npm test
 ```
 
+4. Run IPFS system test:
+The IPFS test checks connectivity and file retrieval using a public IPFS gateway. You can run it with:
+```bash
+npx hardhat test --grep 'IPFS System'
+```
+
 ## Workflow Simulation
 
 To test the complete workflow:
@@ -397,3 +403,265 @@ npx hardhat run scripts/deploy.js --network goerli
 3. Commit your changes
 4. Push to the branch
 5. Create a new Pull Request
+
+## Testing Guide
+
+The project includes a comprehensive test suite covering smart contracts, IPFS functionality, backend services, and frontend components. All tests can be run using a single script or individually.
+
+### Running All Tests
+
+The project includes a unified test script that runs all test suites:
+
+```bash
+bash run-all-tests.sh
+```
+
+This script will sequentially run:
+1. Smart contract tests (including AcademicRecords and IPFS)
+2. Backend service tests
+3. Frontend component tests
+
+### Individual Test Suites
+
+#### Smart Contract Tests
+Located in `/test/AcademicRecords.test.js`, these tests verify the core functionality of the smart contract:
+- Contract deployment and admin role assignment
+- Credential issuance and verification
+- Credential revocation
+- Access control
+
+To run only smart contract tests:
+```bash
+npx hardhat test test/AcademicRecords.test.js
+```
+
+#### IPFS Tests
+Located in `/test/Ipfs.test.js`, these tests verify IPFS integration:
+- File addition and retrieval
+- Data integrity verification
+
+The IPFS tests use a local IPFS node for better reliability and testing control. To run IPFS tests:
+
+1. First, install and start a local IPFS node:
+```bash
+# Install IPFS
+brew install ipfs  # For macOS
+ipfs init         # Initialize IPFS
+ipfs daemon       # Start the IPFS daemon
+```
+
+2. Run the IPFS tests:
+```bash
+npx hardhat test test/Ipfs.test.js
+```
+
+Note: The IPFS tests will automatically skip if no local IPFS node is detected, with a warning message suggesting to start the IPFS daemon.
+
+#### Backend Tests
+Located in `/backend/test/service.test.js`, these tests verify the backend service functionality. Run them with:
+```bash
+cd backend
+npm test
+```
+
+#### Frontend Tests
+Located in `/frontend/src/components/__tests__/`, these tests verify React component behavior:
+- Home component rendering
+- Wallet connection state handling
+- UI element presence
+
+Run frontend tests in CI mode (non-interactive):
+```bash
+cd frontend
+CI=true npm test
+```
+
+Or in watch mode for development:
+```bash
+cd frontend
+npm test
+```
+
+### Test Environment Setup
+
+#### Smart Contract Testing
+- Uses Hardhat's built-in test environment
+- Automatically deploys contracts to local network
+- No additional configuration needed
+
+#### IPFS Testing
+- Requires a local IPFS node (recommended for testing)
+- Tests will skip if IPFS daemon is not running
+- Provides better reliability than using public gateways
+
+#### Frontend Testing
+- Uses Jest and React Testing Library
+- Mocks Web3Context for consistent testing
+- CI mode available for continuous integration environments
+
+### Common Testing Issues
+
+1. IPFS Tests Failing
+   - Ensure IPFS daemon is running locally
+   - Check IPFS node connectivity
+   - Verify port 5001 is available for IPFS
+
+2. Frontend Test Issues
+   - Check that all required testing dependencies are installed
+   - Ensure proper mocking of Web3Context
+   - Use CI=true flag for CI environments
+
+3. Smart Contract Test Issues
+   - Verify Hardhat network is running
+   - Check for sufficient test ETH in accounts
+   - Ensure proper contract compilation
+
+# Step by Step Initialization Guide
+
+## 1. Initial Setup
+
+### 1.1 Start IPFS Daemon
+First, ensure IPFS is installed and running:
+```bash
+# If not installed (on macOS)
+brew install ipfs
+
+# Initialize IPFS (first time only)
+ipfs init
+
+# Start IPFS daemon
+ipfs daemon
+```
+Keep this terminal window open, as IPFS needs to keep running.
+
+### 1.2 Install Dependencies
+Open a new terminal and run:
+```bash
+# Clone and enter the project directory (if not done already)
+git clone <repository-url>
+cd TFG-Informatica
+
+# Install root project dependencies
+npm install
+
+# Install backend dependencies
+cd backend
+npm install
+
+# Install frontend dependencies
+cd ../frontend
+npm install
+```
+
+## 2. Start Local Blockchain
+
+### 2.1 Start Local Hardhat Node
+Open a new terminal and run:
+```bash
+# From project root
+npx hardhat node
+```
+Keep this terminal open to maintain the local blockchain running.
+
+### 2.2 Deploy Smart Contracts
+Open a new terminal and run:
+```bash
+# From project root
+npx hardhat run scripts/deploy.js --network localhost
+```
+⚠️ Important: Copy the deployed contract address that appears in the console. You'll need it for the next steps.
+
+## 3. Configure Environment
+
+### 3.1 Set Up Backend Configuration
+Edit backend/config/default.json:
+```json
+{
+    "blockchain": {
+        "rpcUrl": "http://127.0.0.1:8545",
+        "contractAddress": "YOUR_DEPLOYED_CONTRACT_ADDRESS"  // Paste the address from step 2.2
+    }
+}
+```
+
+### 3.2 Set Up Frontend Configuration
+Create/edit frontend/.env:
+```
+REACT_APP_CONTRACT_ADDRESS=YOUR_DEPLOYED_CONTRACT_ADDRESS  // Same address as above
+REACT_APP_RPC_URL=http://127.0.0.1:8545
+```
+
+## 4. Start the Application
+
+### 4.1 Start Backend Server
+Open a new terminal:
+```bash
+cd backend
+npm start
+```
+
+### 4.2 Start Frontend Application
+Open a new terminal:
+```bash
+cd frontend
+npm start
+```
+
+## 5. Configure MetaMask
+
+1. Install MetaMask browser extension if you haven't already
+2. Add the local network to MetaMask:
+   - Network Name: Hardhat Local
+   - RPC URL: http://127.0.0.1:8545
+   - Chain ID: 31337
+   - Currency Symbol: ETH
+
+3. Import a test account:
+   - Copy one of the private keys shown in the Hardhat node terminal
+   - In MetaMask: Click 'Import Account'
+   - Paste the private key
+
+## 6. Verify Setup
+
+1. Visit http://localhost:3000 in your browser
+2. Connect your MetaMask wallet
+3. You should see your account address and balance
+4. Try to issue a test credential (if you're using an admin account)
+
+## Troubleshooting
+
+If you encounter issues:
+
+1. **Contract Deployment Fails**:
+   - Ensure Hardhat node is running
+   - Check you have sufficient test ETH
+   - Try resetting Hardhat node: Ctrl+C and restart
+
+2. **IPFS Connection Issues**:
+   - Verify IPFS daemon is running
+   - Check IPFS endpoint: http://localhost:5001
+
+3. **Frontend Can't Connect**:
+   - Verify contract address in .env is correct
+   - Ensure MetaMask is connected to Hardhat network
+   - Check console for specific errors
+
+4. **Transaction Errors**:
+   - Reset MetaMask account if transactions get stuck
+   - Ensure you're using the correct account (admin for restricted functions)
+   - Check gas settings in hardhat.config.js
+
+## Running Order Checklist
+
+Here's the correct order to start everything:
+
+1. ✓ IPFS daemon
+2. ✓ Hardhat node
+3. ✓ Deploy contracts
+4. ✓ Configure environment files
+5. ✓ Start backend server
+6. ✓ Start frontend application
+7. ✓ Configure MetaMask
+8. ✓ Connect wallet and test
+
+Remember: Keep IPFS daemon and Hardhat node terminals running throughout your session.
