@@ -22,22 +22,39 @@ router.post('/upload', async (req, res) => {
 
 router.get('/:hash', async (req, res) => {
     try {
-        console.log('Attempting to retrieve IPFS hash:', req.params.hash);
-        const data = await retrieveFromIpfs(req.params.hash);
+        const hash = req.params.hash;
+        console.log('IPFS Route - Request received for hash:', hash);
+        console.log('Request headers:', req.headers);
+        
+        const data = await retrieveFromIpfs(hash);
         
         if (!data) {
+            console.error('No data returned for hash:', hash);
             throw new Error('No data returned from IPFS');
         }
         
-        console.log('Successfully retrieved data from IPFS');
+        console.log('Successfully retrieved data from IPFS:', {
+            hash: hash,
+            dataType: typeof data,
+            dataLength: data.length,
+            preview: data.substring(0, 100) + '...'
+        });
+        
         res.send(data);
     } catch (error) {
-        console.error('IPFS retrieval error:', error);
+        console.error('IPFS retrieval error:', {
+            message: error.message,
+            stack: error.stack,
+            hash: req.params.hash,
+            timestamp: new Date().toISOString()
+        });
+        
         res.status(500).json({ 
             success: false, 
             error: error.message,
             details: 'Failed to retrieve from IPFS',
-            hash: req.params.hash
+            hash: req.params.hash,
+            timestamp: new Date().toISOString()
         });
     }
 });

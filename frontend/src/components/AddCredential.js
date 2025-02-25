@@ -29,14 +29,23 @@ function AddCredential() {
         throw new Error('Invalid Ethereum address');
       }
 
-      // Create record hash
-      const recordHash = ethers.keccak256(ethers.toUtf8Bytes(formData.recordData));
+      // Structure the credential data
+      const credentialData = {
+        data: formData.recordData,
+        metadata: {
+          timestamp: new Date().toISOString(),
+          type: "Added Credential"
+        }
+      };
+
+      // Create record hash from the data field only
+      const recordHash = ethers.keccak256(ethers.toUtf8Bytes(credentialData.data));
       
-      // Add credential
+      // Add credential with structured data
       const tx = await contract.issueCredential(
         formData.recipientAddress,
         recordHash,
-        'QmTemp' // Temporary IPFS hash - this would be handled by backend in production
+        'QmTemp' // The backend will store the full structured data
       );
 
       setStatus({

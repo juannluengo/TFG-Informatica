@@ -86,10 +86,17 @@ const mockIpfsData = new Map([
       institution: "Tech Academy"
     },
     index: 3
+  })],
+  ['QmTemp', JSON.stringify({
+    data: "Latest Added Credential",
+    metadata: {
+      type: "Dynamic",
+      timestamp: new Date().toISOString()
+    }
   })]
 ]);
 
-let lastUsedIndex = 3; // Update to match the number of initial test credentials
+let lastUsedIndex = 4;
 
 export async function uploadToIpfs(data) {
     if (ipfsClient) {
@@ -102,20 +109,26 @@ export async function uploadToIpfs(data) {
         }
     }
     
-    // Fallback to mock data
-    lastUsedIndex++;
-    const hash = `QmTest${lastUsedIndex}`;
-    mockIpfsData.set(hash, JSON.stringify(data));
-    console.log('Saved mock data with hash:', hash);
-    return hash;
+    // When using mock data, always update the QmTemp entry with the latest data
+    mockIpfsData.set('QmTemp', JSON.stringify(data));
+    console.log('Updated mock data for QmTemp with:', data);
+    return 'QmTemp';
 }
 
 export async function retrieveFromIpfs(hash) {
     console.log('Attempting to retrieve from IPFS:', hash);
+    console.log('Mock data keys available:', Array.from(mockIpfsData.keys()));
     
-    // First try local IPFS node
+    // First check mock data directly
+    if (mockIpfsData.has(hash)) {
+        console.log('Found directly in mock data');
+        return mockIpfsData.get(hash);
+    }
+
+    // Try local IPFS node if available
     if (ipfsClient) {
         try {
+            console.log('Attempting to retrieve from local IPFS node...');
             const chunks = [];
             for await (const chunk of ipfsClient.cat(hash)) {
                 chunks.push(chunk);
@@ -123,43 +136,49 @@ export async function retrieveFromIpfs(hash) {
             if (chunks.length > 0) {
                 const content = uint8ArrayToString(uint8ArrayConcat(chunks));
                 console.log('Successfully retrieved from IPFS node');
+                // Cache the result
+                mockIpfsData.set(hash, content);
                 return content;
             }
         } catch (error) {
-            console.warn('Failed to retrieve from IPFS node:', error);
+            console.warn('Failed to retrieve from IPFS node:', error.message);
+        }
+    }
+
+    // Finally try public gateways
+    console.log('Attempting to retrieve from public gateways...');
+    for (const gateway of PUBLIC_GATEWAYS) {
+        try {
+            console.log('Trying gateway:', gateway);
+            const response = await fetch(gateway + hash, {
+                timeout: 5000
+            });
+            if (response.ok) {
+                const data = await response.text();
+                // Cache the result
+                mockIpfsData.set(hash, data);
+                console.log('Successfully retrieved and cached from gateway:', gateway);
+                return data;
+            }
+        } catch (error) {
+            console.warn(`Failed to fetch from gateway ${gateway}:`, error);
         }
     }
     
-    // Then try mock data
-    const mockData = mockIpfsData.get(hash);
-    if (mockData) {
-        console.log('Found in mock data');
+    // If we reach here and hash looks like a mock credential request
+    if (hash.startsWith('QmTest')) {
+        // Create a generic credential for testing
+        const mockData = JSON.stringify({
+            data: `Test Credential ${hash}`,
+            metadata: {
+                type: "Test",
+                id: hash,
+                timestamp: new Date().toISOString()
+            }
+        });
+        mockIpfsData.set(hash, mockData);
         return mockData;
     }
     
-    // Finally try public gateways
-    for (const gateway of PUBLIC_GATEWAYS) {
-        const data = await tryGateway(gateway, hash);
-        if (data) {
-            console.log('Retrieved from gateway:', gateway);
-            return data;
-        }
-    }
-    
-    throw new Error('Data not found in IPFS or mock storage');
-}
-
-async function tryGateway(gateway, hash) {
-    try {
-        const response = await fetch(gateway + hash, {
-            timeout: 5000 // 5 second timeout
-        });
-        if (response.ok) {
-            return await response.text();
-        }
-        throw new Error(`Gateway ${gateway} returned status ${response.status}`);
-    } catch (error) {
-        console.warn(`Failed to fetch from gateway ${gateway}:`, error);
-        return null;
-    }
+    throw new Error(`Data not found in IPFS or mock storage for hash: ${hash}`);
 }

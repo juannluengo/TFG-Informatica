@@ -68,26 +68,47 @@ function VerifyCredential() {
         const ipfsHash = credential.ipfsHash;
         console.log('Fetching from IPFS hash:', ipfsHash);
 
-        const response = await fetch(`${API_URL}/api/ipfs/${ipfsHash}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch data from IPFS');
+        // Add retries for IPFS data fetch
+        let retryCount = 0;
+        const maxRetries = 3;
+        let lastError;
+
+        while (retryCount < maxRetries) {
+          try {
+            const response = await fetch(`${API_URL}/api/ipfs/${ipfsHash}`);
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.text();
+            try {
+              const jsonData = JSON.parse(data);
+              const formattedData = JSON.stringify(jsonData, null, 2);
+              setVerifiedData(formattedData);
+              setStatus({
+                type: 'success',
+                message: 'Credential verified successfully!'
+              });
+              return;
+            } catch (e) {
+              console.log('Response is not JSON, using raw text');
+              setVerifiedData(data);
+              setStatus({
+                type: 'success',
+                message: 'Credential verified successfully!'
+              });
+              return;
+            }
+          } catch (error) {
+            console.warn(`Attempt ${retryCount + 1} failed:`, error);
+            lastError = error;
+            retryCount++;
+            if (retryCount < maxRetries) {
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+            }
+          }
         }
-
-        let data = await response.text();
-        try {
-          const jsonData = JSON.parse(data);
-          data = typeof jsonData === 'string' ? jsonData : JSON.stringify(jsonData, null, 2);
-        } catch (e) {
-          // If it's not JSON, use the raw text
-          console.log('Data is not JSON, using raw text');
-        }
-
-        setVerifiedData(data);
-        setStatus({
-          type: 'success',
-          message: 'Credential verified successfully!'
-        });
-
+        
+        throw lastError || new Error('Failed to fetch data from IPFS after multiple attempts');
       } catch (error) {
         if (error.message.includes("Invalid credential index")) {
           throw new Error('No credential exists at this index for the given address');
