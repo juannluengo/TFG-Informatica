@@ -64,7 +64,7 @@ export default function Web3Provider({ children }) {
           const chainId = network.chainId;
           console.log('Current chain ID:', chainId);
           
-          if (chainId !== 31337n) {
+          if (parseInt(chainId.toString()) !== 31337) {
             setNetworkError('Please connect to Hardhat Local network (Chain ID: 31337)');
             setLoading(false);
             return;
@@ -76,10 +76,20 @@ export default function Web3Provider({ children }) {
           const contract = await initializeContract(signer);
           setContract(contract);
 
+          // Check if the user is an admin
+          try {
+            const ADMIN_ROLE = await contract.DEFAULT_ADMIN_ROLE();
+            const isUserAdmin = await contract.hasRole(ADMIN_ROLE, account);
+            setIsAdmin(isUserAdmin);
+            console.log('User admin status:', isUserAdmin);
+          } catch (error) {
+            console.error('Failed to check admin role:', error);
+          }
+
           // Event listeners for network and account changes
           window.ethereum.on('chainChanged', (chainId) => {
-            const chainIdNum = BigInt(chainId);
-            if (chainIdNum !== 31337n) {
+            const chainIdNum = parseInt(chainId, 16);
+            if (chainIdNum !== 31337) {
               setNetworkError('Please connect to Hardhat Local network (Chain ID: 31337)');
             } else {
               setNetworkError(null);

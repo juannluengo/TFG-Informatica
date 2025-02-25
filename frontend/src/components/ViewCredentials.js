@@ -1,247 +1,327 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Container, 
   Typography, 
   Paper, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow,
-  CircularProgress,
-  Alert,
-  TextField,
+  Box, 
+  CircularProgress, 
+  Alert, 
+  Grid, 
+  Card, 
+  CardContent, 
+  CardActions,
   Button,
-  Box
+  Divider,
+  Chip,
+  useTheme,
+  Collapse,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import { useWeb3 } from '../contexts/Web3Context';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import SchoolIcon from '@mui/icons-material/School';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import PersonIcon from '@mui/icons-material/Person';
+import VerifiedIcon from '@mui/icons-material/Verified';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+
+// Add API URL constant
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 function ViewCredentials() {
-  const { contract, account, loading: web3Loading, networkError } = useWeb3();
+  const { contract, account } = useWeb3();
+  const theme = useTheme();
   const [credentials, setCredentials] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [addressToView, setAddressToView] = useState('');
+  const [expandedId, setExpandedId] = useState(null);
 
-  const loadCredentials = async (address) => {
-    if (!contract) {
-      console.log('Contract not initialized yet');
-      setError('Web3 connection not initialized yet. Please wait...');
-      return;
-    }
+  const toggleExpand = (id) => {
+    setExpandedId(expandedId === id ? null : id);
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text).then(
+      () => {
+        alert('Copied to clipboard!');
+      },
+      (err) => {
+        console.error('Could not copy text: ', err);
+      }
+    );
+  };
+
+  const loadCredentials = useCallback(async () => {
+    if (!contract || !account) return;
     
     setLoading(true);
     setError('');
     
     try {
-      const targetAddress = address || account;
-      console.log('Loading credentials for address:', targetAddress);
+      // Get the count of credentials for the current account
+      const count = await contract.getCredentialCount(account);
+      // Convert to number safely - in ethers v6, this might already be a number
+      const credentialCount = Number(count);
       
-      if (!targetAddress) {
-        throw new Error('No address provided and no account connected');
-      }
-
-      console.log('Getting credential count...');
-      const count = await contract.getCredentialCount(targetAddress);
-      const countNum = Number(count);
-      console.log('Credential count:', countNum);
-      
-      if (countNum === 0) {
-        console.log('No credentials found for address');
+      if (credentialCount === 0) {
         setCredentials([]);
         setLoading(false);
         return;
       }
       
-      const credentialPromises = [];
-      for (let i = 0; i < countNum; i++) {
-        console.log(`Fetching credential at index ${i}`);
-        credentialPromises.push(
-          contract.getCredential(targetAddress, i)
-            .then(cred => ({
-              index: i,
-              recordHash: cred.recordHash,
-              ipfsHash: cred.ipfsHash,
-              issuer: cred.issuer,
-              timestamp: new Date(Number(cred.timestamp) * 1000).toLocaleString(),
-              valid: cred.valid
-            }))
-            .catch(error => {
-              console.error(`Error fetching credential at index ${i}:`, error);
-              return null;
-            })
-        );
+      const credentialsArray = [];
+      
+      // Fetch each credential
+      for (let i = 0; i < credentialCount; i++) {
+        try {
+          const credential = await contract.getCredential(account, i);
+          
+          // Format the credential data
+          const formattedCredential = {
+            index: i,
+            recordHash: credential.recordHash,
+            ipfsHash: credential.ipfsHash,
+            timestamp: new Date(Number(credential.timestamp) * 1000).toLocaleString(),
+            issuer: credential.issuer,
+            valid: credential.valid,
+            data: null
+          };
+          
+          // Try to fetch the IPFS data
+          try {
+            const ipfsResponse = await fetch(`${API_URL}/api/ipfs/get/${credential.ipfsHash}`);
+            
+            if (ipfsResponse.ok) {
+              const ipfsData = await ipfsResponse.json();
+              formattedCredential.data = ipfsData;
+            }
+          } catch (ipfsError) {
+            console.warn(`Failed to fetch IPFS data for credential ${i}:`, ipfsError);
+            // We still keep the credential even if IPFS data is not available
+          }
+          
+          credentialsArray.push(formattedCredential);
+        } catch (credError) {
+          console.error(`Error fetching credential ${i}:`, credError);
+        }
       }
-
-      const results = await Promise.all(credentialPromises);
-      const formattedCredentials = results.filter(cred => cred !== null);
-      console.log('Formatted credentials:', formattedCredentials);
-      setCredentials(formattedCredentials);
+      
+      setCredentials(credentialsArray);
     } catch (error) {
       console.error('Error loading credentials:', error);
-      setError(error.message || 'Failed to load credentials');
+      setError('Failed to load credentials: ' + error.message);
     } finally {
       setLoading(false);
     }
-  };
-
-  // Load credentials when contract and account are ready
+  }, [contract, account]);
+  
   useEffect(() => {
-    const initializeAndLoad = async () => {
-      if (web3Loading) {
-        console.log('Web3 still loading...');
-        return;
-      }
-      
-      if (!contract) {
-        console.log('Contract not ready...');
-        return;
-      }
-      
-      if (!account) {
-        console.log('Account not ready...');
-        return;
-      }
-      
-      console.log('Web3 initialized, loading credentials...');
-      await loadCredentials(addressToView || account);
-    };
-
-    initializeAndLoad();
-  }, [contract, account, web3Loading]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (web3Loading) {
-      setError('Please wait for Web3 to initialize...');
-      return;
+    if (contract && account) {
+      loadCredentials();
     }
-    if (!contract) {
-      setError('Please wait for contract to initialize...');
-      return;
-    }
-    await loadCredentials(addressToView);
-  };
+  }, [contract, account, loadCredentials]);
 
-  const buttonDisabled = loading || web3Loading || !contract || networkError;
-  const getButtonTooltip = () => {
-    if (loading) return 'Loading credentials...';
-    if (web3Loading) return 'Initializing Web3...';
-    if (!contract) return 'Waiting for contract connection...';
-    if (networkError) return networkError;
-    return '';
-  };
-
-  if (web3Loading) {
+  if (!account) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
-        <CircularProgress />
-        <Typography sx={{ mt: 2 }}>Initializing Web3...</Typography>
+      <Container maxWidth="md" sx={{ mt: 4 }}>
+        <Alert severity="warning">
+          Please connect your wallet to view your credentials.
+        </Alert>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
-        <Typography variant="h5" component="h2" gutterBottom>
-          View Academic Credentials
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 8 }}>
+      <Box sx={{ mb: 4, textAlign: 'center' }}>
+        <Typography variant="h4" component="h1" gutterBottom color="primary">
+          Your Academic Credentials
         </Typography>
+        <Typography variant="body1" color="text.secondary">
+          View all your academic credentials stored on the blockchain
+        </Typography>
+      </Box>
 
-        <Box component="form" onSubmit={handleSubmit} sx={{ mb: 4 }}>
-          <TextField
-            fullWidth
-            label="Enter Ethereum Address (optional)"
-            value={addressToView}
-            onChange={(e) => setAddressToView(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button 
-              type="submit" 
-              variant="contained"
-              disabled={buttonDisabled}
-              title={getButtonTooltip()}
-            >
-              {loading ? 'Loading...' : 'View Credentials'}
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setAddressToView('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266');
-                loadCredentials('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266');
-              }}
-              disabled={buttonDisabled}
-            >
-              Load Test Account
-            </Button>
-          </Box>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 8 }}>
+          <CircularProgress />
         </Box>
-
-        {networkError && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {networkError}
-          </Alert>
-        )}
-        
-        {error && !networkError && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', m: 3 }}>
-            <CircularProgress />
-          </Box>
-        ) : credentials.length > 0 ? (
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Index</TableCell>
-                  <TableCell>Record Hash</TableCell>
-                  <TableCell>IPFS Hash</TableCell>
-                  <TableCell>Issuer</TableCell>
-                  <TableCell>Timestamp</TableCell>
-                  <TableCell>Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {credentials.map((cred) => (
-                  <TableRow key={cred.index}>
-                    <TableCell>{cred.index}</TableCell>
-                    <TableCell>
-                      <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                        {cred.recordHash}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{cred.ipfsHash}</TableCell>
-                    <TableCell>
-                      <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                        {cred.issuer}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{cred.timestamp}</TableCell>
-                    <TableCell>
-                      {cred.valid ? (
-                        <Typography color="success.main">Valid</Typography>
-                      ) : (
-                        <Typography color="error">Revoked</Typography>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        ) : (
-          <Typography variant="body1" sx={{ textAlign: 'center', my: 3 }}>
-            No credentials found
+      ) : error ? (
+        <Alert severity="error" sx={{ mb: 4 }}>
+          {error}
+        </Alert>
+      ) : credentials.length === 0 ? (
+        <Card elevation={2} sx={{ p: 4, textAlign: 'center', mb: 4 }}>
+          <SchoolIcon sx={{ fontSize: 60, color: theme.palette.grey[300], mb: 2 }} />
+          <Typography variant="h6" gutterBottom>
+            No Credentials Found
           </Typography>
-        )}
-      </Paper>
+          <Typography variant="body1" color="text.secondary">
+            You don't have any academic credentials stored on the blockchain yet.
+          </Typography>
+        </Card>
+      ) : (
+        <Grid container spacing={3}>
+          {credentials.map((credential, index) => (
+            <Grid item xs={12} key={index}>
+              <Card 
+                elevation={2} 
+                sx={{ 
+                  borderLeft: credential.valid 
+                    ? `4px solid ${theme.palette.success.main}` 
+                    : `4px solid ${theme.palette.error.main}`,
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                  }
+                }}
+              >
+                <CardContent>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={8}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <SchoolIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                        <Typography variant="h6" component="h2">
+                          {credential.data?.data || `Credential #${credential.index}`}
+                        </Typography>
+                        {credential.valid ? (
+                          <Chip 
+                            label="Valid" 
+                            size="small" 
+                            color="success" 
+                            icon={<VerifiedIcon />}
+                            sx={{ ml: 2 }}
+                          />
+                        ) : (
+                          <Chip 
+                            label="Revoked" 
+                            size="small" 
+                            color="error"
+                            sx={{ ml: 2 }}
+                          />
+                        )}
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <CalendarTodayIcon sx={{ fontSize: 16, mr: 0.5, color: theme.palette.text.secondary }} />
+                          <Typography variant="body2" color="text.secondary">
+                            {credential.timestamp}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <PersonIcon sx={{ fontSize: 16, mr: 0.5, color: theme.palette.text.secondary }} />
+                          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            Issuer: {credential.issuer.slice(0, 6)}...{credential.issuer.slice(-4)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Tooltip title="Copy Record Hash">
+                          <Chip
+                            label={`Record Hash: ${credential.recordHash.slice(0, 10)}...${credential.recordHash.slice(-6)}`}
+                            size="small"
+                            variant="outlined"
+                            onClick={() => copyToClipboard(credential.recordHash)}
+                            icon={<ContentCopyIcon sx={{ fontSize: 14 }} />}
+                            sx={{ cursor: 'pointer' }}
+                          />
+                        </Tooltip>
+                        
+                        <Tooltip title="Copy IPFS Hash">
+                          <Chip
+                            label={`IPFS: ${credential.ipfsHash.slice(0, 6)}...${credential.ipfsHash.slice(-4)}`}
+                            size="small"
+                            variant="outlined"
+                            onClick={() => copyToClipboard(credential.ipfsHash)}
+                            icon={<ContentCopyIcon sx={{ fontSize: 14 }} />}
+                            sx={{ cursor: 'pointer' }}
+                          />
+                        </Tooltip>
+                      </Box>
+                    </Grid>
+                    
+                    <Grid item xs={12} sm={4} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', sm: 'flex-end' }, alignItems: 'center' }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => toggleExpand(index)}
+                        endIcon={expandedId === index ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                      >
+                        {expandedId === index ? 'Hide Details' : 'View Details'}
+                      </Button>
+                    </Grid>
+                  </Grid>
+                  
+                  <Collapse in={expandedId === index}>
+                    <Divider sx={{ my: 2 }} />
+                    
+                    <Typography variant="subtitle2" gutterBottom>
+                      Credential Details
+                    </Typography>
+                    
+                    {credential.data ? (
+                      <Box sx={{ mt: 2 }}>
+                        {credential.data.data && (
+                          <Typography variant="body1" paragraph>
+                            <strong>Data:</strong> {credential.data.data}
+                          </Typography>
+                        )}
+                        
+                        {credential.data.metadata && (
+                          <Box sx={{ mt: 2 }}>
+                            <Typography variant="subtitle2" gutterBottom>
+                              Metadata:
+                            </Typography>
+                            <Grid container spacing={1}>
+                              {Object.entries(credential.data.metadata).map(([key, value]) => (
+                                <Grid item xs={12} sm={6} md={4} key={key}>
+                                  <Chip 
+                                    label={`${key}: ${value}`} 
+                                    size="small" 
+                                    sx={{ 
+                                      backgroundColor: theme.palette.background.paper,
+                                      border: `1px solid ${theme.palette.divider}`,
+                                      borderRadius: '4px',
+                                      fontWeight: 400,
+                                      height: 'auto',
+                                      py: 0.5,
+                                      px: 1
+                                    }} 
+                                  />
+                                </Grid>
+                              ))}
+                            </Grid>
+                          </Box>
+                        )}
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        No additional data available for this credential.
+                      </Typography>
+                    )}
+                  </Collapse>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+      
+      <Box sx={{ mt: 4, textAlign: 'center' }}>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          onClick={loadCredentials} 
+          disabled={loading}
+          startIcon={loading ? <CircularProgress size={20} /> : undefined}
+        >
+          Refresh Credentials
+        </Button>
+      </Box>
     </Container>
   );
 }

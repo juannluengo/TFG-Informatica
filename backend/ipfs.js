@@ -3,6 +3,8 @@ import fetch from 'node-fetch';
 import { concat as uint8ArrayConcat } from 'uint8arrays/concat';
 import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string';
 import { toString as uint8ArrayToString } from 'uint8arrays/to-string';
+import { createHash } from 'crypto';
+import { Buffer } from 'buffer';
 
 // IPFS hash validation regex (for CIDv0 and CIDv1)
 const IPFS_HASH_REGEX = /^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[A-Za-z2-7]{58})$/;
@@ -45,87 +47,72 @@ function isValidIpfsHash(hash) {
     return IPFS_HASH_REGEX.test(hash);
 }
 
-// Initialize mock data with test credentials
-const mockIpfsData = new Map([
-  ['QmTest1', JSON.stringify({
-    data: "Bachelor's Degree in Computer Science - GPA 3.8 - Graduated 2023",
-    metadata: {
-      degree: "Bachelor's in Computer Science",
-      gpa: 3.8,
-      graduationYear: 2023,
-      institution: "Example University"
-    },
-    index: 0
-  })],
-  ['QmTest2', JSON.stringify({
-    data: "Master's Degree in Artificial Intelligence - GPA 3.9 - Graduated 2024",
-    metadata: {
-      degree: "Master's in Artificial Intelligence",
-      gpa: 3.9,
-      graduationYear: 2024,
-      institution: "Example University"
-    },
-    index: 1
-  })],
-  ['QmTest3', JSON.stringify({
-    data: "Blockchain Development Certification - Advanced Level - 2024",
-    metadata: {
-      certification: "Blockchain Development",
-      level: "Advanced",
-      year: 2024,
-      institution: "Blockchain Academy"
-    },
-    index: 2
-  })],
-  ['QmTest4', JSON.stringify({
-    data: "Advanced Web Development Certificate - Full Stack - 2024",
-    metadata: {
-      certification: "Web Development",
-      specialization: "Full Stack",
-      year: 2024,
-      institution: "Tech Academy"
-    },
-    index: 3
-  })],
-  ['QmTemp', JSON.stringify({
-    data: "Latest Added Credential",
-    metadata: {
-      type: "Dynamic",
-      timestamp: new Date().toISOString()
-    }
-  })]
-]);
-
-let lastUsedIndex = 4;
+// Cache for recently retrieved IPFS data to improve performance
+const ipfsCache = new Map();
 
 export async function uploadToIpfs(data) {
+    // Try to use the IPFS client first
     if (ipfsClient) {
         try {
             const result = await ipfsClient.add(JSON.stringify(data));
             console.log('Uploaded to IPFS with hash:', result.path);
+            // Cache the data for future retrieval
+            ipfsCache.set(result.path, JSON.stringify(data));
             return result.path;
         } catch (error) {
-            console.warn('Failed to upload to IPFS node, using mock data:', error);
+            console.warn('Failed to upload to IPFS node:', error);
+            // Don't throw here, fall through to the fallback method
         }
     }
     
-    // When using mock data, always update the QmTemp entry with the latest data
-    mockIpfsData.set('QmTemp', JSON.stringify(data));
-    console.log('Updated mock data for QmTemp with:', data);
-    return 'QmTemp';
+    // Fallback: If IPFS client is not available or upload failed, use a deterministic approach
+    console.warn('IPFS client unavailable or upload failed, using deterministic hash generation');
+    
+    try {
+        // Generate a deterministic hash based on content
+        const contentString = JSON.stringify(data);
+        
+        // Use Node.js crypto module to generate a SHA-256 hash
+        const hash = createHash('sha256').update(contentString).digest('hex');
+        
+        // Create a valid IPFS CIDv0 format (Qm + 44 base58 chars)
+        // This is a simplified approximation - in production you'd use a proper CID library
+        const validPrefix = 'Qm';
+        const base58Chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+        let base58Hash = validPrefix;
+        
+        // Generate 44 pseudo-random base58 characters based on the hash
+        for (let i = 0; i < 44; i++) {
+            const index = parseInt(hash.substr(i % hash.length, 2), 16) % base58Chars.length;
+            base58Hash += base58Chars[index];
+        }
+        
+        console.log('Generated deterministic IPFS-like hash:', base58Hash);
+        
+        // Cache the data with this hash
+        ipfsCache.set(base58Hash, contentString);
+        
+        return base58Hash;
+    } catch (error) {
+        console.error('Hash generation failed:', error);
+        throw new Error(`Failed to generate IPFS hash: ${error.message}`);
+    }
 }
 
 export async function retrieveFromIpfs(hash) {
-    console.log('Attempting to retrieve from IPFS:', hash);
-    console.log('Mock data keys available:', Array.from(mockIpfsData.keys()));
-    
-    // First check mock data directly
-    if (mockIpfsData.has(hash)) {
-        console.log('Found directly in mock data');
-        return mockIpfsData.get(hash);
+    if (!isValidIpfsHash(hash)) {
+        throw new Error(`Invalid IPFS hash format: ${hash}`);
     }
 
-    // Try local IPFS node if available
+    console.log('Attempting to retrieve from IPFS:', hash);
+    
+    // Check cache first
+    if (ipfsCache.has(hash)) {
+        console.log('Found in cache');
+        return ipfsCache.get(hash);
+    }
+
+    // Try to retrieve from IPFS node
     if (ipfsClient) {
         try {
             console.log('Attempting to retrieve from local IPFS node...');
@@ -137,7 +124,7 @@ export async function retrieveFromIpfs(hash) {
                 const content = uint8ArrayToString(uint8ArrayConcat(chunks));
                 console.log('Successfully retrieved from IPFS node');
                 // Cache the result
-                mockIpfsData.set(hash, content);
+                ipfsCache.set(hash, content);
                 return content;
             }
         } catch (error) {
@@ -145,7 +132,7 @@ export async function retrieveFromIpfs(hash) {
         }
     }
 
-    // Finally try public gateways
+    // Try public gateways
     console.log('Attempting to retrieve from public gateways...');
     for (const gateway of PUBLIC_GATEWAYS) {
         try {
@@ -156,7 +143,7 @@ export async function retrieveFromIpfs(hash) {
             if (response.ok) {
                 const data = await response.text();
                 // Cache the result
-                mockIpfsData.set(hash, data);
+                ipfsCache.set(hash, data);
                 console.log('Successfully retrieved and cached from gateway:', gateway);
                 return data;
             }
@@ -165,20 +152,5 @@ export async function retrieveFromIpfs(hash) {
         }
     }
     
-    // If we reach here and hash looks like a mock credential request
-    if (hash.startsWith('QmTest')) {
-        // Create a generic credential for testing
-        const mockData = JSON.stringify({
-            data: `Test Credential ${hash}`,
-            metadata: {
-                type: "Test",
-                id: hash,
-                timestamp: new Date().toISOString()
-            }
-        });
-        mockIpfsData.set(hash, mockData);
-        return mockData;
-    }
-    
-    throw new Error(`Data not found in IPFS or mock storage for hash: ${hash}`);
+    throw new Error(`Data not found in IPFS for hash: ${hash}`);
 }

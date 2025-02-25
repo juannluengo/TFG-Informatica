@@ -3,6 +3,9 @@ import { Container, Typography, Paper, TextField, Button, Alert, Box, CircularPr
 import { ethers } from 'ethers';
 import { useWeb3 } from '../contexts/Web3Context';
 
+// Add API URL constant
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+
 function AddCredential() {
   const { contract } = useWeb3();
   const [formData, setFormData] = useState({
@@ -38,14 +41,33 @@ function AddCredential() {
         }
       };
 
+      // First upload the data to IPFS through our backend
+      const uploadResponse = await fetch(`${API_URL}/api/ipfs/upload`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentialData)
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(`Failed to upload to IPFS: ${errorData.error || uploadResponse.statusText}`);
+      }
+
+      const ipfsData = await uploadResponse.json();
+      const ipfsHash = ipfsData.hash;
+      
+      console.log('Data uploaded to IPFS with hash:', ipfsHash);
+
       // Create record hash from the data field only
       const recordHash = ethers.keccak256(ethers.toUtf8Bytes(credentialData.data));
       
-      // Add credential with structured data
+      // Add credential with the real IPFS hash
       const tx = await contract.issueCredential(
         formData.recipientAddress,
         recordHash,
-        'QmTemp' // The backend will store the full structured data
+        ipfsHash
       );
 
       setStatus({
@@ -57,7 +79,7 @@ function AddCredential() {
 
       setStatus({
         type: 'success',
-        message: 'Credential added successfully!'
+        message: `Credential added successfully! IPFS Hash: ${ipfsHash}`
       });
 
       // Clear form
