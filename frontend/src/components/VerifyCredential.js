@@ -66,8 +66,8 @@ function VerifyCredential() {
   const handleVerify = useCallback(async (e) => {
     e.preventDefault();
     setLoading(true);
-    setVerificationResult(null);
     setError('');
+    setVerificationResult(null);
 
     try {
       // Validate inputs
@@ -99,10 +99,7 @@ function VerifyCredential() {
         // Compare the hashes - we need to handle different formats
         let isValid = false;
         let originalText = recordHash; // Store the original input text
-        
-        // The record hash from the input might be in different formats
-        // 1. If it's already a 0x-prefixed hex string of the right length, use it directly
-        // 2. If it's a string without 0x prefix, try both direct comparison and keccak256 hash
+        let credentialName = ""; // Initialize credential name variable
         
         // First, normalize the input hash
         let inputHash = recordHash.trim();
@@ -149,14 +146,39 @@ function VerifyCredential() {
         if (isValid) {
           // If valid, fetch the credential data from IPFS
           try {
+            // First, try to get the credential name from the IPFS hash
+            try {
+              // For real IPFS hashes, fetch the data
+              const ipfsResponse = await fetch(`${API_URL}/api/ipfs/${credential.ipfsHash}`);
+              
+              if (ipfsResponse.ok) {
+                const ipfsData = await ipfsResponse.json();
+                // If we have data.data, use it as the credential name
+                if (ipfsData && ipfsData.data) {
+                  credentialName = ipfsData.data;
+                }
+              }
+            } catch (ipfsNameError) {
+              console.warn('Could not fetch credential name from IPFS:', ipfsNameError);
+              // We'll fall back to other methods
+            }
+            
+            // If we couldn't get the name from IPFS, try other methods
+            if (!credentialName) {
+              // If the original input wasn't a hash, it might be the credential name
+              if (originalText && !originalText.startsWith('0x')) {
+                credentialName = originalText;
+              } else {
+                // Last resort: use a generic name
+                credentialName = `Credential #${indexNum}`;
+              }
+            }
+            
             // Check if the IPFS hash is the placeholder "QmTemp"
-            if (credential.ipfsHash === "QmTemp") {
+            if (credential.ipfsHash === "QmTemp" || credential.ipfsHash === "QmTestHash") {
               // For QmTemp, we'll create a simple data object with the record data
               // This is a fallback for test credentials that don't have real IPFS data
               console.log('Using placeholder data for QmTemp IPFS hash');
-              
-              // Use the original text input as the credential name
-              let credentialName = originalText;
               
               // Create a more structured data object that mimics what would come from IPFS
               let structuredData = {
@@ -179,15 +201,12 @@ function VerifyCredential() {
               });
             } else {
               // For real IPFS hashes, fetch the data
-              const ipfsResponse = await fetch(`${API_URL}/api/ipfs/get/${credential.ipfsHash}`);
+              const ipfsResponse = await fetch(`${API_URL}/api/ipfs/${credential.ipfsHash}`);
               
               if (!ipfsResponse.ok) {
                 // Special handling for 404 Not Found errors
                 if (ipfsResponse.status === 404) {
                   console.log('IPFS hash not found on server, using credential data from blockchain');
-                  
-                  // Use the original text input as the credential name
-                  let credentialName = originalText;
                   
                   setVerificationResult({
                     isValid: true,
@@ -210,6 +229,11 @@ function VerifyCredential() {
               
               const ipfsData = await ipfsResponse.json();
               
+              // If ipfsData doesn't have a data field, add the credential name we determined
+              if (!ipfsData.data) {
+                ipfsData.data = credentialName;
+              }
+              
               setVerificationResult({
                 isValid: true,
                 issuer: credential.issuer,
@@ -224,9 +248,6 @@ function VerifyCredential() {
             console.error('Error fetching IPFS data:', ipfsError);
             
             // Use a more reliable fallback approach without showing an error to the user
-            // Use the original text input as the credential name
-            let credentialName = originalText;
-            
             // Create a more structured data object that mimics what would come from IPFS
             let structuredData = {
               data: credentialName,
@@ -397,14 +418,18 @@ function VerifyCredential() {
                 <>
                   {verificationResult.data && verificationResult.data.data && (
                     <Box sx={{ 
-                      p: 2, 
+                      p: 3, 
                       mb: 3, 
                       backgroundColor: theme.palette.success.light + '20',
                       borderRadius: 1,
-                      border: `1px solid ${theme.palette.success.light}`
+                      border: `1px solid ${theme.palette.success.light}`,
+                      textAlign: 'center'
                     }}>
-                      <Typography variant="h6" gutterBottom color="success.dark">
+                      <Typography variant="h5" gutterBottom color="success.dark" sx={{ fontWeight: 'bold' }}>
                         {verificationResult.data.data}
+                      </Typography>
+                      <Typography variant="subtitle1" color="success.main">
+                        Verified Academic Credential
                       </Typography>
                     </Box>
                   )}

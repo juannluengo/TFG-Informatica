@@ -656,15 +656,17 @@ If you encounter issues:
 
 ## Running Order Checklist
 
-Here's the correct order to start everything:
+Order to start everything:
 
-1. ✓ IPFS daemon
-2. ✓ Hardhat node
-3. ✓ Deploy contracts
-4. ✓ Configure environment files
-5. ✓ Start backend server
-6. ✓ Start frontend application
+1. ✓ IPFS daemon (ipfs daemon)
+2. ✓ Install all packages (npm install on root, front and back)
+3. ✓ Hardhat node (npx hardhat node)
+4. ✓ Deploy contracts (npx hardhat run scripts/deploy.js --network localhost)
+5. ✓ Start backend server (npm start)
+6. ✓ Start frontend application (npm start)
 7. ✓ Configure MetaMask
 8. ✓ Connect wallet and test
+
+Extra: In case you want to quickly add credentials to an address, change it on the addTestCredentials.js and run (npx hardhat run scripts/addTestCredentials.js --network localhost)
 
 Remember: Keep IPFS daemon and Hardhat node terminals running throughout your session.

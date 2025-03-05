@@ -91,7 +91,7 @@ function ViewCredentials() {
           
           // Try to fetch the IPFS data
           try {
-            const ipfsResponse = await fetch(`${API_URL}/api/ipfs/get/${credential.ipfsHash}`);
+            const ipfsResponse = await fetch(`${API_URL}/api/ipfs/${credential.ipfsHash}`);
             
             if (ipfsResponse.ok) {
               const ipfsData = await ipfsResponse.json();
