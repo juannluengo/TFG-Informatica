@@ -31,7 +31,6 @@ function VerifyCredential() {
   const { contract } = useWeb3();
   const theme = useTheme();
   const [studentAddress, setStudentAddress] = useState('');
-  const [credentialIndex, setCredentialIndex] = useState('');
   const [recordHash, setRecordHash] = useState('');
   const [loading, setLoading] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
@@ -75,212 +74,238 @@ function VerifyCredential() {
         throw new Error('Please enter a valid Ethereum address');
       }
 
-      if (!credentialIndex || isNaN(parseInt(credentialIndex))) {
-        throw new Error('Please enter a valid credential index (number)');
-      }
-
-      const indexNum = parseInt(credentialIndex);
-      
-      // Check if index is valid based on credential count
-      if (credentialCount !== null && indexNum >= credentialCount) {
-        throw new Error(`Invalid credential index. This address only has ${credentialCount} credentials (indices 0 to ${credentialCount - 1 >= 0 ? credentialCount - 1 : 0})`);
-      }
-
       if (!recordHash || recordHash.trim() === '') {
         throw new Error('Please enter a record hash');
       }
 
-      // Get the credential to verify
-      try {
-        console.log(`Verifying credential for ${studentAddress} at index ${indexNum} with hash ${recordHash}`);
-        const credential = await contract.getCredential(studentAddress, indexNum);
-        console.log('Retrieved credential:', credential);
-        
-        // Compare the hashes - we need to handle different formats
-        let isValid = false;
-        let originalText = recordHash; // Store the original input text
-        let credentialName = ""; // Initialize credential name variable
-        
-        // First, normalize the input hash
-        let inputHash = recordHash.trim();
-        
-        // Log the credential's record hash for debugging
-        console.log('Credential record hash from blockchain:', credential.recordHash);
-        console.log('Input hash:', inputHash);
-        
-        // Direct comparison first (if both are hex strings)
-        if (inputHash === credential.recordHash) {
-          console.log('Direct hash match');
-          isValid = true;
-        } 
-        // If input doesn't have 0x prefix but credential hash does, add it and compare
-        else if (!inputHash.startsWith('0x') && credential.recordHash.startsWith('0x') && 
-                 ('0x' + inputHash) === credential.recordHash) {
-          console.log('Match after adding 0x prefix');
-          isValid = true;
-        }
-        // Try verifying through the contract
-        else {
-          try {
-            // If the input is not a hex string, hash it first
-            if (!inputHash.startsWith('0x')) {
-              // Store the original text before hashing
-              originalText = inputHash;
-              inputHash = ethers.keccak256(ethers.toUtf8Bytes(inputHash));
-              console.log('Hashed input:', inputHash);
-            }
+      // Check if the address has any credentials
+      if (credentialCount === 0) {
+        throw new Error('This address has no credentials');
+      }
+
+      // Normalize the input hash
+      let inputHash = recordHash.trim();
+      let originalText = recordHash; // Store the original input text
+      
+      // If the input is not a hex string, hash it first
+      if (!inputHash.startsWith('0x')) {
+        // Store the original text before hashing
+        originalText = inputHash;
+        inputHash = ethers.keccak256(ethers.toUtf8Bytes(inputHash));
+        console.log('Hashed input:', inputHash);
+      }
+
+      // Search through all credentials for this address
+      let foundCredential = null;
+      let foundIndex = -1;
+      let isValid = false;
+
+      for (let i = 0; i < credentialCount; i++) {
+        try {
+          // Get the credential
+          const credential = await contract.getCredential(studentAddress, i);
+          
+          // Check if the record hash matches
+          if (credential.recordHash === inputHash || 
+              (credential.recordHash.startsWith('0x') && !inputHash.startsWith('0x') && 
+               credential.recordHash === '0x' + inputHash)) {
             
-            // Use the contract's verify function
-            isValid = await contract.verifyCredential(
+            foundCredential = credential;
+            foundIndex = i;
+            isValid = credential.valid;
+            break;
+          }
+          
+          // Try verifying through the contract
+          try {
+            const verified = await contract.verifyCredential(
               studentAddress, 
-              indexNum, 
+              i, 
               inputHash
             );
-            console.log('Contract verification result:', isValid);
+            
+            if (verified) {
+              foundCredential = credential;
+              foundIndex = i;
+              isValid = true;
+              break;
+            }
           } catch (verifyError) {
-            console.error('Error during contract verification:', verifyError);
-            // Continue with isValid = false
+            // Continue to the next credential
+            console.log(`Verification failed for credential ${i}:`, verifyError);
           }
+        } catch (error) {
+          console.log(`Error checking credential ${i}:`, error);
+          // Continue to the next credential
         }
-        
-        if (isValid) {
-          // If valid, fetch the credential data from IPFS
+      }
+
+      if (!foundCredential) {
+        setVerificationResult({
+          isValid: false,
+          message: "No matching credential found for this address and hash."
+        });
+        setLoading(false);
+        return;
+      }
+
+      // We found a matching credential
+      console.log(`Found matching credential at index ${foundIndex}:`, foundCredential);
+      
+      if (isValid) {
+        // If valid, fetch the credential data from IPFS
+        try {
+          // Initialize credential name
+          let credentialName = "";
+          
+          // First, try to get the credential name from the IPFS hash
           try {
-            // First, try to get the credential name from the IPFS hash
-            try {
-              // For real IPFS hashes, fetch the data
-              const ipfsResponse = await fetch(`${API_URL}/api/ipfs/${credential.ipfsHash}`);
-              
-              if (ipfsResponse.ok) {
-                const ipfsData = await ipfsResponse.json();
-                // If we have data.data, use it as the credential name
-                if (ipfsData && ipfsData.data) {
-                  credentialName = ipfsData.data;
-                }
-              }
-            } catch (ipfsNameError) {
-              console.warn('Could not fetch credential name from IPFS:', ipfsNameError);
-              // We'll fall back to other methods
-            }
+            // For real IPFS hashes, fetch the data
+            const ipfsResponse = await fetch(`${API_URL}/api/ipfs/${foundCredential.ipfsHash}`);
             
-            // If we couldn't get the name from IPFS, try other methods
-            if (!credentialName) {
-              // If the original input wasn't a hash, it might be the credential name
-              if (originalText && !originalText.startsWith('0x')) {
-                credentialName = originalText;
-              } else {
-                // Last resort: use a generic name
-                credentialName = `Credential #${indexNum}`;
-              }
-            }
-            
-            // Check if the IPFS hash is the placeholder "QmTemp"
-            if (credential.ipfsHash === "QmTemp" || credential.ipfsHash === "QmTestHash") {
-              // For QmTemp, we'll create a simple data object with the record data
-              // This is a fallback for test credentials that don't have real IPFS data
-              console.log('Using placeholder data for QmTemp IPFS hash');
-              
-              // Create a more structured data object that mimics what would come from IPFS
-              let structuredData = {
-                data: credentialName,
-                metadata: {
-                  timestamp: new Date(Number(credential.timestamp) * 1000).toISOString(),
-                  issuer: credential.issuer,
-                  recipient: studentAddress
-                }
-              };
-              
-              setVerificationResult({
-                isValid: true,
-                issuer: credential.issuer,
-                recipient: studentAddress,
-                timestamp: new Date(Number(credential.timestamp) * 1000).toLocaleString(),
-                ipfsHash: credential.ipfsHash,
-                recordHash: credential.recordHash,
-                data: structuredData
-              });
-            } else {
-              // For real IPFS hashes, fetch the data
-              const ipfsResponse = await fetch(`${API_URL}/api/ipfs/${credential.ipfsHash}`);
-              
-              if (!ipfsResponse.ok) {
-                // Special handling for 404 Not Found errors
-                if (ipfsResponse.status === 404) {
-                  console.log('IPFS hash not found on server, using credential data from blockchain');
-                  
-                  setVerificationResult({
-                    isValid: true,
-                    issuer: credential.issuer,
-                    recipient: studentAddress,
-                    timestamp: new Date(Number(credential.timestamp) * 1000).toLocaleString(),
-                    ipfsHash: credential.ipfsHash,
-                    recordHash: credential.recordHash,
-                    data: {
-                      data: credentialName,
-                      metadata: {
-                        timestamp: new Date(Number(credential.timestamp) * 1000).toISOString()
-                      }
-                    }
-                  });
-                }
-                
-                throw new Error(`Failed to fetch IPFS data: ${ipfsResponse.statusText}`);
-              }
-              
+            if (ipfsResponse.ok) {
               const ipfsData = await ipfsResponse.json();
-              
-              // If ipfsData doesn't have a data field, add the credential name we determined
-              if (!ipfsData.data) {
-                ipfsData.data = credentialName;
+              // If we have data.data, use it as the credential name
+              if (ipfsData && ipfsData.data) {
+                credentialName = ipfsData.data;
               }
-              
-              setVerificationResult({
-                isValid: true,
-                issuer: credential.issuer,
-                recipient: studentAddress,
-                timestamp: new Date(Number(credential.timestamp) * 1000).toLocaleString(),
-                ipfsHash: credential.ipfsHash,
-                recordHash: credential.recordHash,
-                data: ipfsData
-              });
             }
-          } catch (ipfsError) {
-            console.error('Error fetching IPFS data:', ipfsError);
+          } catch (ipfsNameError) {
+            console.warn('Could not fetch credential name from IPFS:', ipfsNameError);
+            // We'll fall back to other methods
+          }
+          
+          // If we couldn't get the name from IPFS, try other methods
+          if (!credentialName) {
+            // If the original input wasn't a hash, it might be the credential name
+            if (originalText && !originalText.startsWith('0x')) {
+              credentialName = originalText;
+            } else {
+              // Last resort: use a generic name
+              credentialName = `Credential #${foundIndex}`;
+            }
+          }
+          
+          // Check if the IPFS hash is the placeholder "QmTemp"
+          if (foundCredential.ipfsHash === "QmTemp" || foundCredential.ipfsHash === "QmTestHash") {
+            // For QmTemp, we'll create a simple data object with the record data
+            // This is a fallback for test credentials that don't have real IPFS data
+            console.log('Using placeholder data for QmTemp IPFS hash');
             
-            // Use a more reliable fallback approach without showing an error to the user
             // Create a more structured data object that mimics what would come from IPFS
             let structuredData = {
               data: credentialName,
               metadata: {
-                timestamp: new Date(Number(credential.timestamp) * 1000).toISOString(),
-                issuer: credential.issuer,
+                timestamp: new Date(Number(foundCredential.timestamp) * 1000).toISOString(),
+                issuer: foundCredential.issuer,
                 recipient: studentAddress
               }
             };
             
-            // Show the verification result without error messages
             setVerificationResult({
               isValid: true,
-              issuer: credential.issuer,
+              issuer: foundCredential.issuer,
               recipient: studentAddress,
-              timestamp: new Date(Number(credential.timestamp) * 1000).toLocaleString(),
-              ipfsHash: credential.ipfsHash,
-              recordHash: credential.recordHash,
-              data: structuredData
-              // No ipfsError property, so no warning will be shown
+              timestamp: new Date(Number(foundCredential.timestamp) * 1000).toLocaleString(),
+              ipfsHash: foundCredential.ipfsHash,
+              recordHash: foundCredential.recordHash,
+              data: structuredData,
+              index: foundIndex
+            });
+          } else {
+            // For real IPFS hashes, fetch the data
+            const ipfsResponse = await fetch(`${API_URL}/api/ipfs/${foundCredential.ipfsHash}`);
+            
+            if (!ipfsResponse.ok) {
+              // Special handling for 404 Not Found errors
+              if (ipfsResponse.status === 404) {
+                console.log('IPFS hash not found on server, using credential data from blockchain');
+                
+                // Initialize credentialName if not already defined
+                let credentialName = originalText;
+                if (originalText && !originalText.startsWith('0x')) {
+                  credentialName = originalText;
+                } else {
+                  credentialName = `Credential #${foundIndex}`;
+                }
+                
+                setVerificationResult({
+                  isValid: true,
+                  issuer: foundCredential.issuer,
+                  recipient: studentAddress,
+                  timestamp: new Date(Number(foundCredential.timestamp) * 1000).toLocaleString(),
+                  ipfsHash: foundCredential.ipfsHash,
+                  recordHash: foundCredential.recordHash,
+                  data: {
+                    data: credentialName,
+                    metadata: {
+                      timestamp: new Date(Number(foundCredential.timestamp) * 1000).toISOString()
+                    }
+                  },
+                  index: foundIndex
+                });
+              }
+              
+              throw new Error(`Failed to fetch IPFS data: ${ipfsResponse.statusText}`);
+            }
+            
+            const ipfsData = await ipfsResponse.json();
+            
+            // If ipfsData doesn't have a data field, add the credential name we determined
+            if (!ipfsData.data) {
+              ipfsData.data = credentialName;
+            }
+            
+            setVerificationResult({
+              isValid: true,
+              issuer: foundCredential.issuer,
+              recipient: studentAddress,
+              timestamp: new Date(Number(foundCredential.timestamp) * 1000).toLocaleString(),
+              ipfsHash: foundCredential.ipfsHash,
+              recordHash: foundCredential.recordHash,
+              data: ipfsData,
+              index: foundIndex
             });
           }
-        } else {
+        } catch (ipfsError) {
+          console.error('Error fetching IPFS data:', ipfsError);
+          
+          // Use a more reliable fallback approach without showing an error to the user
+          // Create a more structured data object that mimics what would come from IPFS
+          let credentialName = originalText;
+          if (originalText && !originalText.startsWith('0x')) {
+            credentialName = originalText;
+          } else {
+            credentialName = `Credential #${foundIndex}`;
+          }
+          
+          let structuredData = {
+            data: credentialName,
+            metadata: {
+              timestamp: new Date(Number(foundCredential.timestamp) * 1000).toISOString(),
+              issuer: foundCredential.issuer,
+              recipient: studentAddress
+            }
+          };
+          
+          // Show the verification result without error messages
           setVerificationResult({
-            isValid: false,
-            message: "The credential exists but the record hash doesn't match or the credential has been revoked."
+            isValid: true,
+            issuer: foundCredential.issuer,
+            recipient: studentAddress,
+            timestamp: new Date(Number(foundCredential.timestamp) * 1000).toLocaleString(),
+            ipfsHash: foundCredential.ipfsHash,
+            recordHash: foundCredential.recordHash,
+            data: structuredData,
+            index: foundIndex
+            // No ipfsError property, so no warning will be shown
           });
         }
-      } catch (error) {
-        console.error('Error getting credential:', error);
+      } else {
         setVerificationResult({
           isValid: false,
-          message: "Credential not found or invalid parameters."
+          message: "The credential exists but has been revoked.",
+          index: foundIndex
         });
       }
     } catch (error) {
@@ -289,7 +314,7 @@ function VerifyCredential() {
     } finally {
       setLoading(false);
     }
-  }, [contract, studentAddress, credentialIndex, recordHash, credentialCount]);
+  }, [contract, studentAddress, recordHash, credentialCount]);
 
   return (
     <Container maxWidth="md" sx={{ mt: 4, mb: 8 }}>
@@ -299,7 +324,7 @@ function VerifyCredential() {
           Verify Academic Credential
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Verify the authenticity of an academic credential by entering the recipient's address, credential index, and record hash.
+          Verify the authenticity of an academic credential by entering the recipient's address and record hash.
         </Typography>
       </Box>
 
@@ -321,43 +346,23 @@ function VerifyCredential() {
                     checkingCredentials 
                       ? "Checking credentials..." 
                       : credentialCount !== null 
-                        ? `This address has ${credentialCount} credential${credentialCount !== 1 ? 's' : ''} (indices 0 to ${credentialCount - 1 >= 0 ? credentialCount - 1 : 0})` 
+                        ? `This address has ${credentialCount} credential${credentialCount !== 1 ? 's' : ''}` 
                         : "The Ethereum address of the credential recipient"
                   }
                 />
               </Grid>
               
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Credential Index"
-                  value={credentialIndex}
-                  onChange={(e) => setCredentialIndex(e.target.value)}
-                  placeholder="0"
-                  variant="outlined"
-                  type="number"
-                  required
-                  disabled={loading}
-                  error={credentialCount !== null && parseInt(credentialIndex) >= credentialCount}
-                  helperText={
-                    credentialCount !== null && parseInt(credentialIndex) >= credentialCount
-                      ? `Index too high. Max index is ${credentialCount - 1 >= 0 ? credentialCount - 1 : 0}`
-                      : "The index of the credential (usually 0 for the first credential, 1 for the second, etc.)"
-                  }
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Record Hash"
+                  label="Record Hash or Credential Name"
                   value={recordHash}
                   onChange={(e) => setRecordHash(e.target.value)}
-                  placeholder="0x..."
+                  placeholder="0x... or Bachelor's Degree in Computer Science"
                   variant="outlined"
                   required
                   disabled={loading}
-                  helperText="The hash of the credential record"
+                  helperText="Enter either the hash of the credential record or the exact credential name"
                 />
               </Grid>
               
@@ -366,7 +371,7 @@ function VerifyCredential() {
                   type="submit"
                   variant="contained"
                   fullWidth
-                  disabled={loading || (credentialCount !== null && parseInt(credentialIndex) >= credentialCount)}
+                  disabled={loading || credentialCount === 0}
                   startIcon={<SearchIcon />}
                   sx={{ 
                     height: '56px',
@@ -461,10 +466,10 @@ function VerifyCredential() {
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                        IPFS Hash
+                        Credential ID
                       </Typography>
-                      <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                        {verificationResult.ipfsHash}
+                      <Typography variant="body2">
+                        #{verificationResult.index}
                       </Typography>
                     </Grid>
                   </Grid>
@@ -479,7 +484,7 @@ function VerifyCredential() {
                     <Alert severity="warning" sx={{ mt: 2 }}>
                       {verificationResult.ipfsError}
                     </Alert>
-                  ) : verificationResult.data ? (
+                  ) : (
                     <Box sx={{ mt: 2, p: 2, backgroundColor: theme.palette.grey[50], borderRadius: 1 }}>
                       {verificationResult.data.data && (
                         <Typography variant="body1" paragraph>
@@ -514,10 +519,6 @@ function VerifyCredential() {
                         </Box>
                       )}
                     </Box>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      No additional data available
-                    </Typography>
                   )}
                 </>
               ) : (
@@ -536,10 +537,9 @@ function VerifyCredential() {
         </Typography>
         <Typography variant="body2" color="text.secondary">
           1. Enter the recipient's Ethereum address<br />
-          2. Enter the credential index (usually 0 for the first credential, 1 for the second, etc.)<br />
-          3. Enter the record hash of the credential<br />
-          4. Click "Verify Credential" to check its authenticity<br />
-          5. If valid, you'll see the credential details and verification status
+          2. Enter the record hash or the exact credential name (e.g., "Bachelor's Degree in Computer Science")<br />
+          3. Click "Verify Credential" to check its authenticity<br />
+          4. If valid, you'll see the credential details and verification status
         </Typography>
       </Paper>
     </Container>
