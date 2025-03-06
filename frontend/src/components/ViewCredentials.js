@@ -19,6 +19,7 @@ import {
   Tooltip
 } from '@mui/material';
 import { useWeb3 } from '../contexts/Web3Context';
+import { useNavigate } from 'react-router-dom';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import SchoolIcon from '@mui/icons-material/School';
@@ -26,6 +27,8 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import PersonIcon from '@mui/icons-material/Person';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
 // Add API URL constant
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
@@ -33,6 +36,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 function ViewCredentials() {
   const { contract, account } = useWeb3();
   const theme = useTheme();
+  const navigate = useNavigate();
   const [credentials, setCredentials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -51,6 +55,10 @@ function ViewCredentials() {
         console.error('Could not copy text: ', err);
       }
     );
+  };
+
+  const viewCredential = (address, index) => {
+    navigate(`/view/${address}/${index}`);
   };
 
   const loadCredentials = useCallback(async () => {
@@ -86,16 +94,26 @@ function ViewCredentials() {
             timestamp: new Date(Number(credential.timestamp) * 1000).toLocaleString(),
             issuer: credential.issuer,
             valid: credential.valid,
-            data: null
+            data: null,
+            pdfDocument: null
           };
           
           // Try to fetch the IPFS data
           try {
-            const ipfsResponse = await fetch(`${API_URL}/api/ipfs/${credential.ipfsHash}`);
+            const ipfsResponse = await fetch(`${API_URL}/api/ipfs/retrieve/${credential.ipfsHash}`);
             
             if (ipfsResponse.ok) {
               const ipfsData = await ipfsResponse.json();
-              formattedCredential.data = ipfsData;
+              formattedCredential.data = ipfsData.data;
+              
+              // Check if there's a PDF document attached
+              if (ipfsData.data.pdfDocument && ipfsData.data.pdfDocument.ipfsHash) {
+                formattedCredential.pdfDocument = {
+                  ipfsHash: ipfsData.data.pdfDocument.ipfsHash,
+                  filename: ipfsData.data.pdfDocument.filename || 'document.pdf',
+                  filesize: ipfsData.data.pdfDocument.filesize
+                };
+              }
             }
           } catch (ipfsError) {
             console.warn(`Failed to fetch IPFS data for credential ${i}:`, ipfsError);
@@ -250,8 +268,17 @@ function ViewCredentials() {
                         size="small"
                         onClick={() => toggleExpand(index)}
                         endIcon={expandedId === index ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                        sx={{ mr: 1 }}
                       >
                         {expandedId === index ? 'Hide Details' : 'View Details'}
+                      </Button>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        color="primary"
+                        onClick={() => viewCredential(account, credential.index)}
+                      >
+                        View Full
                       </Button>
                     </Grid>
                   </Grid>
@@ -302,6 +329,48 @@ function ViewCredentials() {
                       <Typography variant="body2" color="text.secondary">
                         No additional data available for this credential.
                       </Typography>
+                    )}
+                    
+                    {credential.pdfDocument && (
+                      <Box sx={{ 
+                        mt: 2, 
+                        p: 2, 
+                        border: `1px solid ${theme.palette.divider}`,
+                        borderRadius: 1,
+                        backgroundColor: theme.palette.grey[50]
+                      }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <PictureAsPdfIcon color="error" sx={{ mr: 1 }} />
+                          <Typography variant="subtitle1">
+                            Official Document
+                          </Typography>
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <Box>
+                            <Typography variant="body2">
+                              {credential.pdfDocument.filename}
+                            </Typography>
+                            {credential.pdfDocument.filesize && (
+                              <Typography variant="body2" color="text.secondary">
+                                {(credential.pdfDocument.filesize / 1024 / 1024).toFixed(2)} MB
+                              </Typography>
+                            )}
+                          </Box>
+                          
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<OpenInNewIcon />}
+                            component="a"
+                            href={`${API_URL}/api/ipfs/file/${credential.pdfDocument.ipfsHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            View Document
+                          </Button>
+                        </Box>
+                      </Box>
                     )}
                   </Collapse>
                 </CardContent>

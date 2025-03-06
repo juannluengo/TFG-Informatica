@@ -1,156 +1,258 @@
 import { create } from 'ipfs-http-client';
 import fetch from 'node-fetch';
-import { concat as uint8ArrayConcat } from 'uint8arrays/concat';
-import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string';
-import { toString as uint8ArrayToString } from 'uint8arrays/to-string';
-import { createHash } from 'crypto';
+import crypto from 'crypto';
 import { Buffer } from 'buffer';
+import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 
-// IPFS hash validation regex (for CIDv0 and CIDv1)
-const IPFS_HASH_REGEX = /^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[A-Za-z2-7]{58})$/;
+dotenv.config();
+
+// IPFS hash validation regex
+const ipfsHashRegex = /^Qm[1-9A-HJ-NP-Za-km-z]{44}$/;
 
 // List of public IPFS gateways to try
-const PUBLIC_GATEWAYS = [
+const publicGateways = [
     'https://ipfs.io/ipfs/',
-    'https://gateway.ipfs.io/ipfs/',
+    'https://gateway.pinata.cloud/ipfs/',
     'https://cloudflare-ipfs.com/ipfs/',
     'https://dweb.link/ipfs/'
 ];
 
-let ipfsClient;
-try {
-    // Try to connect to local IPFS node first
-    ipfsClient = create({
-        host: 'localhost',
-        port: 5001,
-        protocol: 'http'
-    });
-    console.log('Connected to local IPFS node');
-} catch (error) {
-    console.warn('Could not connect to local IPFS node, trying Infura...');
-    if (process.env.INFURA_PROJECT_ID && process.env.INFURA_API_SECRET_KEY) {
-        const auth = 'Basic ' + Buffer.from(
-            process.env.INFURA_PROJECT_ID + ':' + process.env.INFURA_API_SECRET_KEY
-        ).toString('base64');
-        ipfsClient = create({
-            host: 'ipfs.infura.io',
-            port: 5001,
-            protocol: 'https',
-            headers: {
-                authorization: auth
-            }
-        });
-    }
-}
-
-function isValidIpfsHash(hash) {
-    return IPFS_HASH_REGEX.test(hash);
-}
-
-// Cache for recently retrieved IPFS data to improve performance
+// Simple cache to avoid repeated IPFS retrievals
 const ipfsCache = new Map();
+const CACHE_MAX_SIZE = 100;
+const CACHE_TTL = 3600000; // 1 hour in milliseconds
 
-export async function uploadToIpfs(data) {
-    // Try to use the IPFS client first
-    if (ipfsClient) {
-        try {
-            const result = await ipfsClient.add(JSON.stringify(data));
-            console.log('Uploaded to IPFS with hash:', result.path);
-            // Cache the data for future retrieval
-            ipfsCache.set(result.path, JSON.stringify(data));
-            return result.path;
-        } catch (error) {
-            console.warn('Failed to upload to IPFS node:', error);
-            // Don't throw here, fall through to the fallback method
-        }
+// Create IPFS client if IPFS_API_URL is provided
+let ipfsClient = null;
+try {
+    if (process.env.IPFS_API_URL) {
+        ipfsClient = create({ url: process.env.IPFS_API_URL });
+        console.log('IPFS client initialized with API URL:', process.env.IPFS_API_URL);
+    } else {
+        console.log('No IPFS_API_URL provided, will use fallback hash generation');
     }
-    
-    // Fallback: If IPFS client is not available or upload failed, use a deterministic approach
-    console.warn('IPFS client unavailable or upload failed, using deterministic hash generation');
-    
+} catch (error) {
+    console.error('Failed to initialize IPFS client:', error);
+}
+
+// Create storage directory if it doesn't exist
+const STORAGE_DIR = path.join(process.cwd(), 'storage');
+if (!fs.existsSync(STORAGE_DIR)) {
+    fs.mkdirSync(STORAGE_DIR, { recursive: true });
+}
+
+/**
+ * Upload data to IPFS
+ * @param {Object|Buffer} data - Data to upload (JSON object or binary Buffer)
+ * @param {boolean} isBinary - Whether the data is binary
+ * @returns {Promise<string>} - IPFS hash
+ */
+export const uploadToIpfs = async (data, isBinary = false) => {
     try {
-        // Generate a deterministic hash based on content
-        const contentString = JSON.stringify(data);
+        let content;
         
-        // Use Node.js crypto module to generate a SHA-256 hash
-        const hash = createHash('sha256').update(contentString).digest('hex');
+        if (isBinary) {
+            // For binary data (like PDFs), ensure it's a Buffer
+            if (!data) {
+                throw new Error('No data provided for upload');
+            }
+            
+            content = Buffer.isBuffer(data) ? data : Buffer.from(data);
+            
+            // Validate that we have actual binary data
+            if (content.length === 0) {
+                throw new Error('Empty binary data provided');
+            }
+        } else {
+            // For JSON data, stringify and convert to Buffer
+            try {
+                content = Buffer.from(JSON.stringify(data));
+            } catch (jsonError) {
+                throw new Error(`Failed to stringify JSON data: ${jsonError.message}`);
+            }
+        }
+
+        // Try to use IPFS client if available
+        if (ipfsClient) {
+            try {
+                const result = await ipfsClient.add(content);
+                console.log('Successfully uploaded to IPFS node:', result.path);
+                return result.path;
+            } catch (ipfsError) {
+                console.error('Error uploading to IPFS node, falling back to deterministic hash:', ipfsError);
+            }
+        }
+
+        // Fallback: Generate a deterministic hash if IPFS client is not available or fails
+        const hash = crypto.createHash('sha256').update(content).digest('hex');
         
-        // Create a valid IPFS CIDv0 format (Qm + 44 base58 chars)
-        // This is a simplified approximation - in production you'd use a proper CID library
-        const validPrefix = 'Qm';
-        const base58Chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-        let base58Hash = validPrefix;
+        // Convert to base58 format and ensure proper length for IPFS CIDv0
+        const base58Hash = Buffer.from(hash, 'hex').toString('base64')
+            .replace(/[+/]/g, '') // Remove invalid characters
+            .replace(/=+$/, ''); // Remove padding
         
-        // Generate 44 pseudo-random base58 characters based on the hash
-        for (let i = 0; i < 44; i++) {
-            const index = parseInt(hash.substr(i % hash.length, 2), 16) % base58Chars.length;
-            base58Hash += base58Chars[index];
+        // Ensure exactly 44 characters after 'Qm'
+        const truncatedHash = base58Hash.substring(0, 44);
+        const ipfsStyleHash = `Qm${truncatedHash}`;
+        
+        // Double-check the final hash format
+        if (!ipfsHashRegex.test(ipfsStyleHash)) {
+            console.error('Generated hash validation failed:', ipfsStyleHash);
+            throw new Error('Failed to generate valid IPFS-style hash');
         }
         
-        console.log('Generated deterministic IPFS-like hash:', base58Hash);
+        // Store in both cache and file system
+        ipfsCache.set(ipfsStyleHash, {
+            data: isBinary ? content : data,
+            timestamp: Date.now(),
+            isBinary
+        });
+
+        // Also save to file system for persistence
+        const filePath = path.join(STORAGE_DIR, ipfsStyleHash);
+        try {
+            if (isBinary) {
+                fs.writeFileSync(filePath, content);
+            } else {
+                fs.writeFileSync(filePath, JSON.stringify(data));
+            }
+            console.log('Saved content to local storage:', filePath);
+        } catch (fsError) {
+            console.error('Failed to save to local storage:', fsError);
+            // Don't throw - we still have the cache
+        }
         
-        // Cache the data with this hash
-        ipfsCache.set(base58Hash, contentString);
+        // Manage cache size
+        if (ipfsCache.size > CACHE_MAX_SIZE) {
+            const oldestKey = [...ipfsCache.entries()]
+                .sort((a, b) => a[1].timestamp - b[1].timestamp)[0][0];
+            ipfsCache.delete(oldestKey);
+        }
         
-        return base58Hash;
+        console.log('Generated valid IPFS-style hash:', ipfsStyleHash);
+        return ipfsStyleHash;
     } catch (error) {
-        console.error('Hash generation failed:', error);
-        throw new Error(`Failed to generate IPFS hash: ${error.message}`);
+        console.error('Error in uploadToIpfs:', error);
+        throw new Error(`Failed to upload to IPFS: ${error.message}`);
     }
-}
+};
 
-export async function retrieveFromIpfs(hash) {
-    if (!isValidIpfsHash(hash)) {
-        throw new Error(`Invalid IPFS hash format: ${hash}`);
-    }
-
-    console.log('Attempting to retrieve from IPFS:', hash);
-    
-    // Check cache first
-    if (ipfsCache.has(hash)) {
-        console.log('Found in cache');
-        return ipfsCache.get(hash);
-    }
-
-    // Try to retrieve from IPFS node
-    if (ipfsClient) {
-        try {
-            console.log('Attempting to retrieve from local IPFS node...');
-            const chunks = [];
-            for await (const chunk of ipfsClient.cat(hash)) {
-                chunks.push(chunk);
-            }
-            if (chunks.length > 0) {
-                const content = uint8ArrayToString(uint8ArrayConcat(chunks));
-                console.log('Successfully retrieved from IPFS node');
-                // Cache the result
-                ipfsCache.set(hash, content);
-                return content;
-            }
-        } catch (error) {
-            console.warn('Failed to retrieve from IPFS node:', error.message);
+/**
+ * Retrieve data from IPFS
+ * @param {string} hash - IPFS hash
+ * @param {boolean} isBinary - Whether to return binary data
+ * @returns {Promise<Object|Buffer|null>} - Retrieved data
+ */
+export const retrieveFromIpfs = async (hash, isBinary = false) => {
+    try {
+        // Validate hash format
+        if (!ipfsHashRegex.test(hash)) {
+            throw new Error('Invalid IPFS hash format');
         }
-    }
 
-    // Try public gateways
-    console.log('Attempting to retrieve from public gateways...');
-    for (const gateway of PUBLIC_GATEWAYS) {
-        try {
-            console.log('Trying gateway:', gateway);
-            const response = await fetch(gateway + hash, {
-                timeout: 5000
-            });
-            if (response.ok) {
-                const data = await response.text();
-                // Cache the result
-                ipfsCache.set(hash, data);
-                console.log('Successfully retrieved and cached from gateway:', gateway);
-                return data;
+        // Check cache first
+        if (ipfsCache.has(hash)) {
+            const cached = ipfsCache.get(hash);
+            
+            // Check if cache entry is still valid
+            if (Date.now() - cached.timestamp < CACHE_TTL) {
+                console.log('Retrieved from cache:', hash);
+                return cached.data;
+            } else {
+                // Remove expired cache entry
+                ipfsCache.delete(hash);
             }
-        } catch (error) {
-            console.warn(`Failed to fetch from gateway ${gateway}:`, error);
         }
+
+        // Try IPFS client if available
+        if (ipfsClient) {
+            try {
+                const chunks = [];
+                for await (const chunk of ipfsClient.cat(hash)) {
+                    chunks.push(chunk);
+                }
+                const content = Buffer.concat(chunks);
+                
+                let result = isBinary ? content : JSON.parse(content.toString());
+                
+                // Update cache
+                ipfsCache.set(hash, {
+                    data: result,
+                    timestamp: Date.now(),
+                    isBinary
+                });
+                
+                return result;
+            } catch (ipfsError) {
+                console.error('Error retrieving from IPFS node:', ipfsError);
+            }
+        }
+
+        // Check local storage before trying public gateways
+        const filePath = path.join(STORAGE_DIR, hash);
+        if (fs.existsSync(filePath)) {
+            try {
+                const content = fs.readFileSync(filePath);
+                const result = isBinary ? content : JSON.parse(content.toString());
+                
+                // Update cache
+                ipfsCache.set(hash, {
+                    data: result,
+                    timestamp: Date.now(),
+                    isBinary
+                });
+                
+                console.log('Retrieved from local storage:', hash);
+                return result;
+            } catch (fsError) {
+                console.error('Error reading from local storage:', fsError);
+            }
+        }
+
+        // Try public gateways if IPFS client is not available or fails
+        for (const gateway of publicGateways) {
+            try {
+                const response = await fetch(`${gateway}${hash}`);
+                
+                if (response.ok) {
+                    if (isBinary) {
+                        // For binary data, return the buffer
+                        const buffer = await response.buffer();
+                        
+                        // Cache the result
+                        ipfsCache.set(hash, {
+                            data: buffer,
+                            timestamp: Date.now(),
+                            isBinary: true
+                        });
+                        
+                        return buffer;
+                    } else {
+                        // For JSON data, parse the response
+                        const data = await response.json();
+                        
+                        // Cache the result
+                        ipfsCache.set(hash, {
+                            data,
+                            timestamp: Date.now(),
+                            isBinary: false
+                        });
+                        
+                        return data;
+                    }
+                }
+            } catch (gatewayError) {
+                console.error(`Error retrieving from gateway ${gateway}:`, gatewayError);
+            }
+        }
+
+        // If we reach here, we couldn't retrieve the data
+        console.error('Failed to retrieve from all IPFS sources');
+        return null;
+    } catch (error) {
+        console.error('Error in retrieveFromIpfs:', error);
+        throw new Error(`Failed to retrieve from IPFS: ${error.message}`);
     }
-    
-    throw new Error(`Data not found in IPFS for hash: ${hash}`);
-}
+};

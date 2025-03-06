@@ -9,6 +9,7 @@ import Home from './components/Home';
 import IssueCredential from './components/IssueCredential';
 import VerifyCredential from './components/VerifyCredential';
 import ViewCredentials from './components/ViewCredentials';
+import ViewCredential from './components/ViewCredential';
 import Web3Provider, { useWeb3 } from './contexts/Web3Context';
 
 // Create a more vibrant and modern theme
@@ -114,6 +115,7 @@ function AppContent() {
           <Route path="/issue" element={<IssueCredential />} />
           <Route path="/verify" element={<VerifyCredential />} />
           <Route path="/view" element={<ViewCredentials />} />
+          <Route path="/view/:address/:index" element={<ViewCredential />} />
           {/* Redirect /add to /issue to avoid confusion */}
           <Route path="/add" element={<Navigate to="/issue" replace />} />
         </Routes>
