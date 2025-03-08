@@ -4,7 +4,10 @@ const fs = require("fs");
 const path = require("path");
 
 async function main() {
-  const studentAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+  // Get the signer's address
+  const [signer] = await ethers.getSigners();
+  const studentAddress = await signer.getAddress();
+  console.log("Using connected address:", studentAddress);
   
   // Read contract address from backend config
   let contractAddress;
