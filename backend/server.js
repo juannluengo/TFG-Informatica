@@ -3,6 +3,11 @@
 import express from 'express';
 import cors from 'cors';
 import ipfsRoutes from './routes/ipfsRoutes.js';
+import studentDirectoryRoutes from './routes/studentDirectoryRoutes.js';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -10,7 +15,7 @@ const PORT = process.env.PORT || 3001;
 // Configure CORS
 app.use(cors({
     origin: ['http://localhost:3000', 'http://localhost:3002'], // Frontend URLs
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }));
 
@@ -19,6 +24,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/ipfs', ipfsRoutes);
+app.use('/api/students', studentDirectoryRoutes);
 
 // Basic health check endpoint
 app.get('/health', (req, res) => {

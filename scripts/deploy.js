@@ -5,16 +5,29 @@
 const { ethers } = require("hardhat");
 
 async function main() {
-  // Get the contract factory
+  // Get the contract factories
   const AcademicRecords = await ethers.getContractFactory("AcademicRecords");
+  const StudentDirectory = await ethers.getContractFactory("StudentDirectory");
   
-  // Deploy the contract
+  // Deploy the AcademicRecords contract
   console.log("Deploying AcademicRecords contract...");
-  const contract = await AcademicRecords.deploy();
-  await contract.waitForDeployment();
+  const academicRecordsContract = await AcademicRecords.deploy();
+  await academicRecordsContract.waitForDeployment();
   
-  const address = await contract.getAddress();
-  console.log("AcademicRecords deployed to:", address);
+  const academicRecordsAddress = await academicRecordsContract.getAddress();
+  console.log("AcademicRecords deployed to:", academicRecordsAddress);
+  
+  // Deploy the StudentDirectory contract
+  console.log("Deploying StudentDirectory contract...");
+  const studentDirectoryContract = await StudentDirectory.deploy();
+  await studentDirectoryContract.waitForDeployment();
+  
+  const studentDirectoryAddress = await studentDirectoryContract.getAddress();
+  console.log("StudentDirectory deployed to:", studentDirectoryAddress);
+  
+  console.log("Deployment complete!");
+  console.log("AcademicRecords:", academicRecordsAddress);
+  console.log("StudentDirectory:", studentDirectoryAddress);
 }
 
 main()

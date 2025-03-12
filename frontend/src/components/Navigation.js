@@ -43,6 +43,7 @@ function Navigation() {
     { path: '/issue', label: 'Issue Credential', showAlways: true },
     { path: '/view', label: 'View Credentials', showAlways: true },
     { path: '/verify', label: 'Verify Credential', showAlways: true },
+    { path: '/directory', label: 'Student Directory', showAlways: true },
   ];
 
   const filteredItems = navItems.filter(item => 
