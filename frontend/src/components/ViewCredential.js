@@ -248,7 +248,7 @@ function ViewCredential() {
             <Grid item xs={12}>
               <Divider sx={{ my: 1 }} />
               <Typography variant="subtitle2" color="text.secondary">
-                Credential Details
+                Credential Name
               </Typography>
               <Typography variant="body1" sx={{ mt: 1, whiteSpace: 'pre-wrap' }}>
                 {credential.data}

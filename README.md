@@ -669,4 +669,50 @@ Order to start everything:
 
 Extra: In case you want to quickly add credentials to an address, change it on the addTestCredentials.js and run (npx hardhat run scripts/addTestCredentials.js --network localhost)
 
+# --------------------------------------------
+
 Remember: Keep IPFS daemon and Hardhat node terminals running throughout your session.
+
+# Automated Setup and Deployment
+
+For easier project setup, I've created automation scripts that handle contract deployment and environment configuration:
+
+## Using the Automated Scripts
+
+### One-step Setup Process
+
+1. Make sure your Hardhat node is running:
+```bash
+npx hardhat node
+```
+
+2. Install dependencies for the scripts:
+```bash
+./install-dependencies.sh
+```
+
+3. Run the automated setup script:
+```bash
+./start-all.sh
+```
+
+This script will:
+- Deploy all smart contracts
+- Update both frontend and backend .env files with the correct contract addresses
+- Optionally register test students
+- Guide you on starting the backend, frontend, and IPFS daemon
+
+The script eliminates the need to manually update environment variables when redeploying contracts, ensuring that both frontend and backend always use the correct contract addresses.
+
+### Adding Test Students
+
+When prompted by the script, you can choose to register test students. This will register:
+- Pedro Picapiedra (Computer Science)
+- Jane Smith Johnson (Data Science)
+
+### Starting the Services
+
+After the script completes, follow the on-screen instructions to start:
+1. Backend server
+2. Frontend application
+3. IPFS daemon (if not already running)

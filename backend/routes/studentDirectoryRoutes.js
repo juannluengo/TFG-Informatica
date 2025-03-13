@@ -2,6 +2,7 @@
 
 import express from 'express';
 import * as studentDirectoryController from '../controllers/studentDirectoryController.js';
+import * as studentDirectoryService from '../services/studentDirectoryService.js';
 
 const router = express.Router();
 

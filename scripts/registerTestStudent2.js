@@ -1,11 +1,26 @@
 const { ethers } = require("hardhat");
+const fs = require("fs");
+const path = require("path");
+const dotenv = require("dotenv");
+
+// Load the backend .env file to get the contract address
+const backendEnvPath = path.join(__dirname, "..", "backend", ".env");
+dotenv.config({ path: backendEnvPath });
 
 async function main() {
   // Get the contract factory
   const StudentDirectory = await ethers.getContractFactory("StudentDirectory");
   
-  // Get the deployed contract
-  const studentDirectoryAddress = "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
+  // Get the deployed contract address from .env
+  const studentDirectoryAddress = process.env.STUDENT_DIRECTORY_ADDRESS;
+  
+  if (!studentDirectoryAddress) {
+    console.error("ERROR: Student Directory contract address not found in backend/.env file.");
+    console.error("Run 'npx hardhat run scripts/deploy-and-update-envs.js --network localhost' first.");
+    process.exit(1);
+  }
+
+  console.log("Using StudentDirectory contract at:", studentDirectoryAddress);
   const studentDirectory = await StudentDirectory.attach(studentDirectoryAddress);
   
   // Get the signer
@@ -50,6 +65,12 @@ async function main() {
     
   } catch (error) {
     console.error("Error registering student:", error.message);
+    if (error.message.includes("execution reverted")) {
+      console.log("This might be due to:");
+      console.log("1. The student is already registered");
+      console.log("2. The signer doesn't have the ADMIN_ROLE");
+      console.log("3. The contract address is incorrect");
+    }
   }
 }
 

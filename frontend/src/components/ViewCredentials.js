@@ -16,7 +16,10 @@ import {
   useTheme,
   Collapse,
   IconButton,
-  Tooltip
+  Tooltip,
+  Switch,
+  FormControlLabel,
+  FormGroup
 } from '@mui/material';
 import { useWeb3 } from '../contexts/Web3Context';
 import { useNavigate } from 'react-router-dom';
@@ -29,18 +32,23 @@ import VerifiedIcon from '@mui/icons-material/Verified';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import StudentAddressSelector from './StudentAddressSelector';
 
 // Add API URL constant
 const API_URL = (process.env.REACT_APP_API_URL || 'http://localhost:3001/api').replace(/\/+$/, '');
 
 function ViewCredentials() {
-  const { contract, account } = useWeb3();
+  const { contract, account, isAdmin } = useWeb3();
   const theme = useTheme();
   const navigate = useNavigate();
   const [credentials, setCredentials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  
+  // New state variables for viewing other addresses' credentials
+  const [viewingOtherAddress, setViewingOtherAddress] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState('');
 
   const toggleExpand = (id) => {
     setExpandedId(expandedId === id ? null : id);
@@ -61,15 +69,30 @@ function ViewCredentials() {
     navigate(`/view/${address}/${index}`);
   };
 
-  const loadCredentials = useCallback(async () => {
-    if (!contract || !account) return;
+  // Handler for the address selector
+  const handleAddressChange = (address) => {
+    setSelectedAddress(address);
+    // Clear credentials when address changes
+    setCredentials([]);
+  };
+
+  // Handler for the toggle switch
+  const handleToggleViewMode = (event) => {
+    setViewingOtherAddress(event.target.checked);
+    // Clear credentials when switching view mode
+    setCredentials([]);
+    setSelectedAddress('');
+  };
+
+  const loadCredentials = useCallback(async (targetAddress) => {
+    if (!contract || !targetAddress) return;
     
     setLoading(true);
     setError('');
     
     try {
-      // Get the count of credentials for the current account
-      const count = await contract.getCredentialCount(account);
+      // Get the count of credentials for the target address
+      const count = await contract.getCredentialCount(targetAddress);
       // Convert to number safely - in ethers v6, this might already be a number
       const credentialCount = Number(count);
       
@@ -84,7 +107,7 @@ function ViewCredentials() {
       // Fetch each credential
       for (let i = 0; i < credentialCount; i++) {
         try {
-          const credential = await contract.getCredential(account, i);
+          const credential = await contract.getCredential(targetAddress, i);
           
           // Format the credential data
           const formattedCredential = {
@@ -133,19 +156,25 @@ function ViewCredentials() {
     } finally {
       setLoading(false);
     }
-  }, [contract, account]);
+  }, [contract]);
   
   useEffect(() => {
-    if (contract && account) {
-      loadCredentials();
+    if (contract) {
+      if (viewingOtherAddress && selectedAddress) {
+        // If viewing other address and address is selected
+        loadCredentials(selectedAddress);
+      } else if (!viewingOtherAddress && account) {
+        // If viewing own address and connected
+        loadCredentials(account);
+      }
     }
-  }, [contract, account, loadCredentials]);
+  }, [contract, account, loadCredentials, viewingOtherAddress, selectedAddress]);
 
   if (!account) {
     return (
       <Container maxWidth="md" sx={{ mt: 4 }}>
         <Alert severity="warning">
-          Please connect your wallet to view your credentials.
+          Please connect your wallet to view credentials.
         </Alert>
       </Container>
     );
@@ -153,13 +182,42 @@ function ViewCredentials() {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 8 }}>
-      <Box sx={{ mb: 4, textAlign: 'center' }}>
-        <Typography variant="h4" component="h1" gutterBottom color="primary">
-          Your Academic Credentials
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          View all your academic credentials stored on the blockchain
-        </Typography>
+      <Box sx={{ mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
+          <Typography variant="h4" component="h1" gutterBottom color="primary">
+            {viewingOtherAddress ? "Student Credentials" : "Your Academic Credentials"}
+          </Typography>
+          
+          {isAdmin && (
+            <FormGroup>
+              <FormControlLabel 
+                control={
+                  <Switch
+                    checked={viewingOtherAddress}
+                    onChange={handleToggleViewMode}
+                    color="primary"
+                  />
+                }
+                label="View other students' credentials"
+              />
+            </FormGroup>
+          )}
+        </Box>
+        
+        {viewingOtherAddress ? (
+          <Box sx={{ mb: 3 }}>
+            <StudentAddressSelector
+              value={selectedAddress}
+              onChange={handleAddressChange}
+              label="Select Student Address"
+              helperText="Select a student to view their credentials"
+            />
+          </Box>
+        ) : (
+          <Typography variant="body1" color="text.secondary" align="center">
+            View all your academic credentials stored on the blockchain
+          </Typography>
+        )}
       </Box>
 
       {loading ? (
@@ -170,6 +228,16 @@ function ViewCredentials() {
         <Alert severity="error" sx={{ mb: 4 }}>
           {error}
         </Alert>
+      ) : viewingOtherAddress && !selectedAddress ? (
+        <Card elevation={2} sx={{ p: 4, textAlign: 'center', mb: 4 }}>
+          <PersonIcon sx={{ fontSize: 60, color: theme.palette.grey[300], mb: 2 }} />
+          <Typography variant="h6" gutterBottom>
+            No Student Selected
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Please select a student address to view their credentials.
+          </Typography>
+        </Card>
       ) : credentials.length === 0 ? (
         <Card elevation={2} sx={{ p: 4, textAlign: 'center', mb: 4 }}>
           <SchoolIcon sx={{ fontSize: 60, color: theme.palette.grey[300], mb: 2 }} />
@@ -177,7 +245,9 @@ function ViewCredentials() {
             No Credentials Found
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            You don't have any academic credentials stored on the blockchain yet.
+            {viewingOtherAddress 
+              ? "This student doesn't have any academic credentials stored on the blockchain yet."
+              : "You don't have any academic credentials stored on the blockchain yet."}
           </Typography>
         </Card>
       ) : (
@@ -202,7 +272,7 @@ function ViewCredentials() {
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                         <SchoolIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
                         <Typography variant="h6" component="h2">
-                          {credential.data?.data || `Credential #${credential.index}`}
+                          {credential.data?.name || `Credential #${credential.index}`}
                         </Typography>
                         {credential.valid ? (
                           <Chip 
@@ -276,7 +346,7 @@ function ViewCredentials() {
                         variant="contained"
                         size="small"
                         color="primary"
-                        onClick={() => viewCredential(account, credential.index)}
+                        onClick={() => viewCredential(viewingOtherAddress ? selectedAddress : account, credential.index)}
                       >
                         View Full
                       </Button>
@@ -384,8 +454,14 @@ function ViewCredentials() {
         <Button 
           variant="contained" 
           color="primary" 
-          onClick={loadCredentials} 
-          disabled={loading}
+          onClick={() => {
+            if (viewingOtherAddress && selectedAddress) {
+              loadCredentials(selectedAddress);
+            } else if (!viewingOtherAddress && account) {
+              loadCredentials(account);
+            }
+          }} 
+          disabled={loading || (viewingOtherAddress && !selectedAddress)}
           startIcon={loading ? <CircularProgress size={20} /> : undefined}
         >
           Refresh Credentials

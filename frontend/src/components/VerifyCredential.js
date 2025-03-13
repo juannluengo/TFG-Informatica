@@ -25,6 +25,7 @@ import VerifiedIcon from '@mui/icons-material/Verified';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import StudentAddressSelector from './StudentAddressSelector';
 
 // Add API URL constant
 const API_URL = (process.env.REACT_APP_API_URL || 'http://localhost:3001/api').replace(/\/+$/, '');
@@ -77,6 +78,14 @@ function VerifyCredential() {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
+    });
+  };
+
+  // Add handler for StudentAddressSelector
+  const handleStudentAddressChange = (address) => {
+    setFormData({
+      ...formData,
+      recipientAddress: address
     });
   };
 
@@ -399,23 +408,18 @@ function VerifyCredential() {
           <form onSubmit={handleSubmit}>
             <Grid container spacing={3}>
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Recipient Ethereum Address"
-                  name="recipientAddress"
+                <StudentAddressSelector
                   value={formData.recipientAddress}
-                  onChange={handleChange}
-                  required
-                  variant="outlined"
-                  placeholder="0x..."
+                  onChange={handleStudentAddressChange}
+                  label="Recipient Ethereum Address"
+                  disabled={loading}
                   helperText={
                     checkingCredentials 
                       ? "Checking credentials..." 
                       : credentialCount !== null 
                         ? `${credentialCount} credential(s) found for this address` 
-                        : "Enter the Ethereum address of the credential recipient"
+                        : undefined
                   }
-                  disabled={loading}
                 />
               </Grid>
               
@@ -531,7 +535,7 @@ function VerifyCredential() {
               <Grid item xs={12}>
                 <Divider sx={{ my: 1 }} />
                 <Typography variant="subtitle2" color="text.secondary">
-                  Credential Details
+                  Credential Name
                 </Typography>
                 <Typography variant="body1" sx={{ mt: 1, whiteSpace: 'pre-wrap' }}>
                   {verificationResult.data}

@@ -27,6 +27,7 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DeleteIcon from '@mui/icons-material/Delete';
+import StudentAddressSelector from './StudentAddressSelector';
 
 // Add API URL constant
 const API_URL = (process.env.REACT_APP_API_URL || 'http://localhost:3001/api').replace(/\/+$/, '');
@@ -37,7 +38,6 @@ function IssueCredential() {
   const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     studentAddress: '',
-    recordData: '',
     credentialName: ''
   });
   const [status, setStatus] = useState({ type: '', message: '' });
@@ -52,6 +52,14 @@ function IssueCredential() {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
+    });
+  };
+
+  // Add a new handler for the StudentAddressSelector
+  const handleStudentAddressChange = (address) => {
+    setFormData({
+      ...formData,
+      studentAddress: address
     });
   };
 
@@ -87,8 +95,8 @@ function IssueCredential() {
         throw new Error('Invalid Ethereum address');
       }
 
-      if (!formData.recordData) {
-        throw new Error('Please enter credential details');
+      if (!formData.credentialName) {
+        throw new Error('Please enter the credential name');
       }
 
       setActiveStep(1);
@@ -100,7 +108,7 @@ function IssueCredential() {
       // Structure the credential data
       const credentialData = {
         name: formData.credentialName,
-        data: formData.recordData,
+        data: formData.credentialName,
         metadata: {
           timestamp: new Date().toISOString(),
           type: "Academic Credential",
@@ -237,8 +245,8 @@ function IssueCredential() {
         message: `Data uploaded to IPFS. Now issuing credential on blockchain...`
       });
 
-      // Create record hash from the data field only
-      const recordHash = ethers.keccak256(ethers.toUtf8Bytes(formData.recordData));
+      // Create record hash from the credential name field
+      const recordHash = ethers.keccak256(ethers.toUtf8Bytes(formData.credentialName));
       
       // Issue credential with the real IPFS hash
       const tx = await contract.issueCredential(
@@ -262,7 +270,6 @@ function IssueCredential() {
       // Clear form
       setFormData({
         studentAddress: '',
-        recordData: '',
         credentialName: ''
       });
       setSelectedFile(null);
@@ -342,16 +349,9 @@ function IssueCredential() {
             <form onSubmit={handleSubmit}>
               <Grid container spacing={3}>
                 <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Recipient Ethereum Address"
-                    name="studentAddress"
+                  <StudentAddressSelector
                     value={formData.studentAddress}
-                    onChange={handleChange}
-                    required
-                    variant="outlined"
-                    placeholder="0x..."
-                    helperText="Enter the Ethereum address of the credential recipient"
+                    onChange={handleStudentAddressChange}
                     disabled={loading}
                   />
                 </Grid>
@@ -366,24 +366,7 @@ function IssueCredential() {
                     required
                     variant="outlined"
                     placeholder="Bachelor's Degree in Computer Science"
-                    helperText="Enter a name for this credential"
-                    disabled={loading}
-                  />
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Credential Details"
-                    name="recordData"
-                    value={formData.recordData}
-                    onChange={handleChange}
-                    required
-                    multiline
-                    rows={4}
-                    variant="outlined"
-                    placeholder="Bachelor's Degree in Computer Science - GPA 3.8 - Graduated 2023"
-                    helperText="Enter the academic credential details (degree, grade, year, etc.)"
+                    helperText="Enter the academic credential name (e.g., degree, certificate, award)"
                     disabled={loading}
                   />
                 </Grid>

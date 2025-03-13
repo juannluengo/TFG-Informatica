@@ -1,6 +1,87 @@
 // Purpose: Contains functions to interact with the StudentDirectory backend API
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+
+// Add diagnostic helper
+export const diagnoseFrontendConnection = async () => {
+    try {
+        console.log('Running frontend diagnostics...');
+        console.log('Using API_BASE_URL:', API_BASE_URL);
+        
+        // Test basic connectivity
+        console.log('Testing basic connectivity...');
+        const healthResponse = await fetch(`${API_BASE_URL.replace('/api', '')}/health`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+        });
+        
+        if (!healthResponse.ok) {
+            throw new Error(`Health check failed: ${healthResponse.status} ${healthResponse.statusText}`);
+        }
+        
+        const healthData = await healthResponse.json();
+        console.log('Health check response:', healthData);
+        
+        // Test students endpoint
+        console.log('Testing students endpoint...');
+        try {
+            const studentsResponse = await fetch(`${API_BASE_URL}/students/all`, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+            });
+            
+            if (!studentsResponse.ok) {
+                throw new Error(`Students endpoint failed: ${studentsResponse.status} ${studentsResponse.statusText}`);
+            }
+            
+            const studentsData = await studentsResponse.json();
+            console.log('Students endpoint response:', studentsData);
+        } catch (error) {
+            console.error('Students endpoint error:', error);
+        }
+        
+        // Test contract diagnostics
+        console.log('Testing contract diagnostics...');
+        try {
+            const diagResponse = await fetch(`${API_BASE_URL}/diagnostics/contract`, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+            });
+            
+            if (!diagResponse.ok) {
+                throw new Error(`Diagnostics endpoint failed: ${diagResponse.status} ${diagResponse.statusText}`);
+            }
+            
+            const diagData = await diagResponse.json();
+            console.log('Contract diagnostics response:', diagData);
+            
+            return {
+                success: true,
+                message: 'Diagnostic completed successfully',
+                healthStatus: healthData.status,
+                contractStatus: diagData.success ? 'Connected' : 'Failed',
+                results: {
+                    health: healthData,
+                    diagnostics: diagData
+                }
+            };
+        } catch (error) {
+            console.error('Diagnostics endpoint error:', error);
+            return {
+                success: false,
+                message: 'Diagnostic failed at diagnostics endpoint',
+                error: error.message
+            };
+        }
+    } catch (error) {
+        console.error('Fatal diagnostic error:', error);
+        return {
+            success: false,
+            message: 'Frontend diagnostic failed',
+            error: error.message
+        };
+    }
+};
 
 /**
  * Register a new student
@@ -170,13 +251,35 @@ export const isStudentRegistered = async (studentAddress) => {
  */
 export const getAllStudents = async (startIndex = 0, count = 10) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/students/all?startIndex=${startIndex}&count=${count}`);
-        return await response.json();
+        const url = `${API_BASE_URL}/students/all?startIndex=${startIndex}&count=${count}`;
+        console.log('Attempting to fetch students from:', url);
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            // Add a timeout to prevent hanging requests
+            signal: AbortSignal.timeout(10000) // 10 second timeout
+        });
+        
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Received student data:', data);
+        return data;
     } catch (error) {
         console.error('Error getting all students:', error);
         return {
             success: false,
             error: error.message,
+            students: [], // Return empty array for safety
+            totalCount: 0
         };
     }
 }; 

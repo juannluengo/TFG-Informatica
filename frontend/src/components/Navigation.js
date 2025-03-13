@@ -18,6 +18,7 @@ import { useWeb3 } from '../contexts/Web3Context';
 import MenuIcon from '@mui/icons-material/Menu';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import SchoolIcon from '@mui/icons-material/School';
+import BuildIcon from '@mui/icons-material/Build';
 
 function Navigation() {
   const { account, isAdmin, networkError } = useWeb3();
@@ -44,6 +45,7 @@ function Navigation() {
     { path: '/view', label: 'View Credentials', showAlways: true },
     { path: '/verify', label: 'Verify Credential', showAlways: true },
     { path: '/directory', label: 'Student Directory', showAlways: true },
+    { path: '/diagnostics', label: 'Diagnostics', icon: <BuildIcon fontSize="small" />, showAlways: true },
   ];
 
   const filteredItems = navItems.filter(item => 
@@ -107,6 +109,7 @@ function Navigation() {
                     onClick={handleMenuClose}
                     selected={isActive(item.path)}
                   >
+                    {item.icon && <Box component="span" sx={{ mr: 1, display: 'flex', alignItems: 'center' }}>{item.icon}</Box>}
                     {item.label}
                   </MenuItem>
                 ))}
@@ -128,6 +131,7 @@ function Navigation() {
                       backgroundColor: 'rgba(255, 255, 255, 0.25)',
                     }
                   }}
+                  startIcon={item.icon}
                 >
                   {item.label}
                 </Button>

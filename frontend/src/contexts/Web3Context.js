@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { ethers } from 'ethers';
 import AcademicRecordsArtifact from '../contracts/AcademicRecords.json';
+import StudentDirectoryArtifact from '../contracts/StudentDirectory.json';
 
 const Web3Context = createContext();
 
@@ -11,37 +12,63 @@ export function useWeb3() {
 export default function Web3Provider({ children }) {
   const [account, setAccount] = useState(null);
   const [provider, setProvider] = useState(null);
-  const [contract, setContract] = useState(null);
+  const [academicRecordsContract, setAcademicRecordsContract] = useState(null);
+  const [studentDirectoryContract, setStudentDirectoryContract] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [networkError, setNetworkError] = useState(null);
 
-  const initializeContract = async (signer) => {
+  const initializeContracts = async (signer) => {
     try {
-      const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS || "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-      console.log('Contract address being used:', contractAddress);
+      // Initialize Academic Records Contract
+      const academicRecordsAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
+      console.log('Academic Records contract address:', academicRecordsAddress);
       
       if (!AcademicRecordsArtifact.abi) {
-        throw new Error('Contract ABI not found');
+        throw new Error('Academic Records ABI not found');
       }
 
-      const contract = new ethers.Contract(
-        contractAddress,
+      const academicRecords = new ethers.Contract(
+        academicRecordsAddress,
         AcademicRecordsArtifact.abi,
         signer
       );
 
-      // Test if we can actually call contract methods
-      try {
-        const count = await contract.getCredentialCount(await signer.getAddress());
-        console.log('Successfully tested contract with getCredentialCount:', count.toString());
-        return contract;
-      } catch (error) {
-        console.error('Failed to test contract method:', error);
-        throw new Error('Contract method test failed - check if contract is deployed correctly');
+      // Initialize Student Directory Contract
+      const studentDirectoryAddress = process.env.REACT_APP_STUDENT_DIRECTORY_ADDRESS;
+      console.log('Student Directory contract address:', studentDirectoryAddress);
+      
+      if (!StudentDirectoryArtifact.abi) {
+        throw new Error('Student Directory ABI not found');
       }
+
+      const studentDirectory = new ethers.Contract(
+        studentDirectoryAddress,
+        StudentDirectoryArtifact.abi,
+        signer
+      );
+
+      // Test Academic Records contract
+      try {
+        const count = await academicRecords.getCredentialCount(await signer.getAddress());
+        console.log('Successfully tested Academic Records contract:', count.toString());
+      } catch (error) {
+        console.error('Failed to test Academic Records contract:', error);
+        throw new Error('Academic Records contract test failed');
+      }
+
+      // Test Student Directory contract
+      try {
+        const count = await studentDirectory.getStudentCount();
+        console.log('Successfully tested Student Directory contract:', count.toString());
+      } catch (error) {
+        console.error('Failed to test Student Directory contract:', error);
+        throw new Error('Student Directory contract test failed');
+      }
+
+      return { academicRecords, studentDirectory };
     } catch (error) {
-      console.error('Failed to initialize contract:', error);
+      console.error('Failed to initialize contracts:', error);
       throw error;
     }
   };
@@ -71,15 +98,16 @@ export default function Web3Provider({ children }) {
           }
           setNetworkError(null);
           
-          // Get signer and initialize contract
+          // Get signer and initialize contracts
           const signer = await provider.getSigner();
-          const contract = await initializeContract(signer);
-          setContract(contract);
+          const { academicRecords, studentDirectory } = await initializeContracts(signer);
+          setAcademicRecordsContract(academicRecords);
+          setStudentDirectoryContract(studentDirectory);
 
-          // Check if the user is an admin
+          // Check if the user is an admin in either contract
           try {
-            const ADMIN_ROLE = await contract.DEFAULT_ADMIN_ROLE();
-            const isUserAdmin = await contract.hasRole(ADMIN_ROLE, account);
+            const ADMIN_ROLE = await academicRecords.DEFAULT_ADMIN_ROLE();
+            const isUserAdmin = await academicRecords.hasRole(ADMIN_ROLE, account);
             setIsAdmin(isUserAdmin);
             console.log('User admin status:', isUserAdmin);
           } catch (error) {
@@ -124,7 +152,9 @@ export default function Web3Provider({ children }) {
   const value = {
     account,
     provider,
-    contract,
+    contract: academicRecordsContract, // Keep for backward compatibility
+    academicRecordsContract,
+    studentDirectoryContract,
     isAdmin,
     loading,
     networkError
