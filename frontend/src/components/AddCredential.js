@@ -4,13 +4,14 @@ import { ethers } from 'ethers';
 import { useWeb3 } from '../contexts/Web3Context';
 
 // Add API URL constant
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const API_URL = (process.env.REACT_APP_API_URL || 'http://localhost:3001/api').replace(/\/+$/, '');
 
 function AddCredential() {
   const { contract } = useWeb3();
   const [formData, setFormData] = useState({
     recipientAddress: '',
-    recordData: ''
+    recordData: '',
+    credentialName: ''
   });
   const [status, setStatus] = useState({ type: '', message: '' });
   const [loading, setLoading] = useState(false);
@@ -34,6 +35,7 @@ function AddCredential() {
 
       // Structure the credential data
       const credentialData = {
+        name: formData.credentialName,
         data: formData.recordData,
         metadata: {
           timestamp: new Date().toISOString(),
@@ -42,7 +44,7 @@ function AddCredential() {
       };
 
       // First upload the data to IPFS through our backend
-      const uploadResponse = await fetch(`${API_URL}/api/ipfs/upload`, {
+      const uploadResponse = await fetch(`${API_URL}/ipfs/upload`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -85,7 +87,8 @@ function AddCredential() {
       // Clear form
       setFormData({
         recipientAddress: '',
-        recordData: ''
+        recordData: '',
+        credentialName: ''
       });
     } catch (error) {
       console.error('Error adding credential:', error);
@@ -119,6 +122,16 @@ function AddCredential() {
             margin="normal"
             required
             helperText="Enter the Ethereum address of the recipient"
+          />
+          <TextField
+            fullWidth
+            label="Credential Name"
+            name="credentialName"
+            value={formData.credentialName}
+            onChange={handleChange}
+            margin="normal"
+            required
+            helperText="Enter a name for this credential"
           />
           <TextField
             fullWidth

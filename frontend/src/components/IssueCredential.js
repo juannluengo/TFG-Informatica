@@ -29,7 +29,7 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 // Add API URL constant
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const API_URL = (process.env.REACT_APP_API_URL || 'http://localhost:3001/api').replace(/\/+$/, '');
 
 function IssueCredential() {
   const { contract, account } = useWeb3();
@@ -37,7 +37,8 @@ function IssueCredential() {
   const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     studentAddress: '',
-    recordData: ''
+    recordData: '',
+    credentialName: ''
   });
   const [status, setStatus] = useState({ type: '', message: '' });
   const [loading, setLoading] = useState(false);
@@ -98,6 +99,7 @@ function IssueCredential() {
 
       // Structure the credential data
       const credentialData = {
+        name: formData.credentialName,
         data: formData.recordData,
         metadata: {
           timestamp: new Date().toISOString(),
@@ -120,9 +122,9 @@ function IssueCredential() {
         formData.append('file', selectedFile);
 
         // Upload the PDF file
-        console.log('Attempting to upload PDF to:', `${API_URL}/api/ipfs/upload-file`);
+        console.log('Attempting to upload PDF to:', `${API_URL}/ipfs/upload-file`);
         try {
-          const fileUploadResponse = await fetch(`${API_URL}/api/ipfs/upload-file`, {
+          const fileUploadResponse = await fetch(`${API_URL}/ipfs/upload-file`, {
             method: 'POST',
             body: formData
           });
@@ -189,7 +191,7 @@ function IssueCredential() {
       // Upload the credential data to IPFS
       let uploadResponse;
       try {
-        uploadResponse = await fetch(`${API_URL}/api/ipfs/upload`, {
+        uploadResponse = await fetch(`${API_URL}/ipfs/upload`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -260,7 +262,8 @@ function IssueCredential() {
       // Clear form
       setFormData({
         studentAddress: '',
-        recordData: ''
+        recordData: '',
+        credentialName: ''
       });
       setSelectedFile(null);
       setFilePreview(null);
@@ -349,6 +352,21 @@ function IssueCredential() {
                     variant="outlined"
                     placeholder="0x..."
                     helperText="Enter the Ethereum address of the credential recipient"
+                    disabled={loading}
+                  />
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Credential Name"
+                    name="credentialName"
+                    value={formData.credentialName}
+                    onChange={handleChange}
+                    required
+                    variant="outlined"
+                    placeholder="Bachelor's Degree in Computer Science"
+                    helperText="Enter a name for this credential"
                     disabled={loading}
                   />
                 </Grid>

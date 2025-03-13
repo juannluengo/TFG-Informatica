@@ -31,7 +31,7 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
 // Add API URL constant
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const API_URL = (process.env.REACT_APP_API_URL || 'http://localhost:3001/api').replace(/\/+$/, '');
 
 function ViewCredentials() {
   const { contract, account } = useWeb3();
@@ -100,7 +100,7 @@ function ViewCredentials() {
           
           // Try to fetch the IPFS data
           try {
-            const ipfsResponse = await fetch(`${API_URL}/api/ipfs/retrieve/${credential.ipfsHash}`);
+            const ipfsResponse = await fetch(`${API_URL}/ipfs/retrieve/${credential.ipfsHash}`);
             
             if (ipfsResponse.ok) {
               const ipfsData = await ipfsResponse.json();
@@ -363,7 +363,7 @@ function ViewCredentials() {
                             size="small"
                             startIcon={<OpenInNewIcon />}
                             component="a"
-                            href={`${API_URL}/api/ipfs/file/${credential.pdfDocument.ipfsHash}`}
+                            href={`${API_URL}/ipfs/file/${credential.pdfDocument.ipfsHash}`}
                             target="_blank"
                             rel="noopener noreferrer"
                           >

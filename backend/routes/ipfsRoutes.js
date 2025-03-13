@@ -19,7 +19,13 @@ const storage = multer.diskStorage({
         const uploadDir = path.join(__dirname, '../uploads');
         // Create the uploads directory if it doesn't exist
         if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
+            try {
+                fs.mkdirSync(uploadDir, { recursive: true });
+                console.log('Created uploads directory at:', uploadDir);
+            } catch (mkdirError) {
+                console.error('Error creating uploads directory:', mkdirError);
+                return cb(new Error(`Failed to create uploads directory: ${mkdirError.message}`));
+            }
         }
         console.log('File will be uploaded to:', uploadDir);
         cb(null, uploadDir);

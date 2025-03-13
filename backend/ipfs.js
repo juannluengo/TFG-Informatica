@@ -28,6 +28,7 @@ const CACHE_TTL = 3600000; // 1 hour in milliseconds
 let ipfsClient = null;
 try {
     if (process.env.IPFS_API_URL) {
+        console.log('Attempting to connect to IPFS at:', process.env.IPFS_API_URL);
         ipfsClient = create({ url: process.env.IPFS_API_URL });
         console.log('IPFS client initialized with API URL:', process.env.IPFS_API_URL);
     } else {
@@ -40,8 +41,33 @@ try {
 // Create storage directory if it doesn't exist
 const STORAGE_DIR = path.join(process.cwd(), 'storage');
 if (!fs.existsSync(STORAGE_DIR)) {
-    fs.mkdirSync(STORAGE_DIR, { recursive: true });
+    try {
+        fs.mkdirSync(STORAGE_DIR, { recursive: true });
+        console.log('Created storage directory at:', STORAGE_DIR);
+    } catch (error) {
+        console.error('Failed to create storage directory:', error);
+    }
 }
+
+// Test IPFS connection
+const testIpfsConnection = async () => {
+    if (!ipfsClient) {
+        console.log('No IPFS client available to test');
+        return false;
+    }
+    
+    try {
+        const version = await ipfsClient.version();
+        console.log('IPFS connection successful. Version:', version.version);
+        return true;
+    } catch (error) {
+        console.error('IPFS connection test failed:', error);
+        return false;
+    }
+};
+
+// Test the connection on startup
+testIpfsConnection();
 
 /**
  * Upload data to IPFS
@@ -65,10 +91,13 @@ export const uploadToIpfs = async (data, isBinary = false) => {
             if (content.length === 0) {
                 throw new Error('Empty binary data provided');
             }
+            
+            console.log('Processing binary data for IPFS upload, size:', content.length);
         } else {
             // For JSON data, stringify and convert to Buffer
             try {
                 content = Buffer.from(JSON.stringify(data));
+                console.log('Processing JSON data for IPFS upload, size:', content.length);
             } catch (jsonError) {
                 throw new Error(`Failed to stringify JSON data: ${jsonError.message}`);
             }
@@ -77,12 +106,16 @@ export const uploadToIpfs = async (data, isBinary = false) => {
         // Try to use IPFS client if available
         if (ipfsClient) {
             try {
+                console.log('Attempting to upload to IPFS node...');
                 const result = await ipfsClient.add(content);
                 console.log('Successfully uploaded to IPFS node:', result.path);
                 return result.path;
             } catch (ipfsError) {
-                console.error('Error uploading to IPFS node, falling back to deterministic hash:', ipfsError);
+                console.error('Error uploading to IPFS node:', ipfsError);
+                console.log('Falling back to deterministic hash generation');
             }
+        } else {
+            console.log('No IPFS client available, using deterministic hash generation');
         }
 
         // Fallback: Generate a deterministic hash if IPFS client is not available or fails

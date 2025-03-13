@@ -27,7 +27,7 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
 // Add API URL constant
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const API_URL = (process.env.REACT_APP_API_URL || 'http://localhost:3001/api').replace(/\/+$/, '');
 
 function VerifyCredential() {
   const { contract } = useWeb3();
@@ -170,7 +170,7 @@ function VerifyCredential() {
         } else {
           // Need to fetch the IPFS data to check the credential name
           try {
-            const ipfsResponse = await fetch(`${API_URL}/api/ipfs/retrieve/${credential.ipfsHash}`);
+            const ipfsResponse = await fetch(`${API_URL}/ipfs/retrieve/${credential.ipfsHash}`);
             
             if (ipfsResponse.ok) {
               const ipfsData = await ipfsResponse.json();
@@ -240,7 +240,7 @@ function VerifyCredential() {
           return;
         }
 
-        const ipfsUrl = `${API_URL}/api/ipfs/retrieve/${ipfsHash}`;
+        const ipfsUrl = `${API_URL}/ipfs/retrieve/${ipfsHash}`;
         console.log('Attempting to fetch IPFS data from:', ipfsUrl);
         
         const ipfsResponse = await fetch(ipfsUrl);
@@ -572,7 +572,7 @@ function VerifyCredential() {
                         size="small"
                         startIcon={<OpenInNewIcon />}
                         component="a"
-                        href={`${API_URL}/api/ipfs/file/${pdfDocument.ipfsHash}`}
+                        href={`${API_URL}/ipfs/file/${pdfDocument.ipfsHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
                       >

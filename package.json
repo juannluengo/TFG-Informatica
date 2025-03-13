@@ -27,6 +27,8 @@
   "dependencies": {
     "@openzeppelin/contracts": "^5.2.0",
     "ethers": "^6.13.5",
-    "mocha": "^11.1.0"
+    "form-data": "^4.0.2",
+    "mocha": "^11.1.0",
+    "node-fetch": "^2.7.0"
   }
 }

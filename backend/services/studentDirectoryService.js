@@ -23,10 +23,32 @@ const loadContractABI = () => {
 
 class StudentDirectoryService {
     constructor(rpcUrl, contractAddress) {
+        console.log('Initializing StudentDirectoryService with:');
+        console.log('- RPC URL:', rpcUrl);
+        console.log('- Contract Address:', contractAddress);
+        
         this.provider = new ethers.JsonRpcProvider(rpcUrl);
         this.contractABI = loadContractABI();
         this.contractAddress = contractAddress;
         this.contract = new ethers.Contract(contractAddress, this.contractABI, this.provider);
+        
+        // Verify contract connection
+        this.verifyContractConnection();
+    }
+    
+    // Verify that the contract is properly connected
+    async verifyContractConnection() {
+        try {
+            // Try to call a simple view function to verify connection
+            const code = await this.provider.getCode(this.contractAddress);
+            if (code === '0x') {
+                console.error('No contract found at address:', this.contractAddress);
+            } else {
+                console.log('Contract found at address:', this.contractAddress);
+            }
+        } catch (error) {
+            console.error('Error verifying contract connection:', error);
+        }
     }
 
     // Initialize with a signer for transactions that modify state
