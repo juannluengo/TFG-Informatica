@@ -1,9 +1,92 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36" version="26.1.1">
   <diagram name="Página-1" id="H2Ah7bwJBJVgN_lX7dqN">
-    <mxGraphModel>
+    <mxGraphModel dx="1566" dy="955" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
+        <mxCell id="F65EEOmcfr3abWwm6Up7-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="F65EEOmcfr3abWwm6Up7-1" target="F65EEOmcfr3abWwm6Up7-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="F65EEOmcfr3abWwm6Up7-1" target="F65EEOmcfr3abWwm6Up7-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-1" value="University Admin&lt;div&gt;(Administrator)&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-2" value="External Verifier&lt;div&gt;(Employer/Institution)&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="40" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="F65EEOmcfr3abWwm6Up7-3" target="F65EEOmcfr3abWwm6Up7-12">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-20" y="360" />
+              <mxPoint x="-20" y="890" />
+              <mxPoint x="360" y="890" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-3" value="StudentDirectory.sol&lt;div&gt;(smart contract)&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;--------------&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;Stores:&amp;nbsp;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- Student information&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- Addresses&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- Active Status&lt;/div&gt;&lt;div&gt;&lt;div&gt;--------------&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;Functions:&lt;/div&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- registerStudent&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- updateStudent&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- deactivateStudent&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- reactivateStudent&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="35" y="240" width="130" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="F65EEOmcfr3abWwm6Up7-5" target="F65EEOmcfr3abWwm6Up7-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-35" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="F65EEOmcfr3abWwm6Up7-5" target="F65EEOmcfr3abWwm6Up7-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-5" value="AcademicRecords.sol&lt;div&gt;(smart contract)&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;--------------&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;Stores:&amp;nbsp;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- Credentual Hashes&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- IPFS Links&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- Issuers, Timestamps&lt;/div&gt;&lt;div&gt;&lt;div&gt;--------------&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;Functions:&lt;/div&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- issueCredential&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- revokeCredential&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- verifyCredential&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- getCredentialData&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="240" y="240" width="130" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="F65EEOmcfr3abWwm6Up7-8" target="F65EEOmcfr3abWwm6Up7-12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-8" value="IPFS (off-chain)&lt;div&gt;Stores full records&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="585" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="F65EEOmcfr3abWwm6Up7-10" target="F65EEOmcfr3abWwm6Up7-11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-10" value="Student&lt;div&gt;(Ethereum address)&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="540" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-23" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="F65EEOmcfr3abWwm6Up7-11" target="F65EEOmcfr3abWwm6Up7-12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-27" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="F65EEOmcfr3abWwm6Up7-11" target="F65EEOmcfr3abWwm6Up7-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=0.25;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="F65EEOmcfr3abWwm6Up7-11" target="F65EEOmcfr3abWwm6Up7-5">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="135" y="630" />
+              <mxPoint x="272" y="630" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-11" value="Web3 Frontend (DApp)&lt;div&gt;(University portal)&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;div&gt;--------------&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;User interface:&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- Register student&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- Issue credential&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- Verify credential&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="680" width="140" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.25;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="F65EEOmcfr3abWwm6Up7-12" target="F65EEOmcfr3abWwm6Up7-11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-25" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=0.75;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="F65EEOmcfr3abWwm6Up7-12" target="F65EEOmcfr3abWwm6Up7-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-12" value="&lt;div&gt;Blockchain network&lt;/div&gt;&lt;div&gt;(Ethereum)&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;div&gt;--------------&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;Execute transactions:&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- Smart contract calls&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- Stores data on-chain&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- Logs events&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="290" y="680" width="140" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-14" value="" style="endArrow=none;dashed=1;html=1;dashPattern=1 3;strokeWidth=2;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" target="F65EEOmcfr3abWwm6Up7-2">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="460" y="360" as="sourcePoint" />
+            <mxPoint x="620" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="F65EEOmcfr3abWwm6Up7-15" value="" style="endArrow=none;dashed=1;html=1;dashPattern=1 3;strokeWidth=2;rounded=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" target="F65EEOmcfr3abWwm6Up7-5">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="460" y="360" as="sourcePoint" />
+            <mxPoint x="620" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
