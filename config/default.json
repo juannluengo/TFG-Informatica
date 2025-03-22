@@ -2,7 +2,7 @@
     "blockchain": {
         "rpcUrl": "http://127.0.0.1:8545",
         "chainId": 31337,
-        "contractAddress": "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318",
-        "studentDirectoryAddress": "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"
+        "contractAddress": "0xa85233C63b9Ee964Add6F2cffe00Fd84eb32338f",
+        "studentDirectoryAddress": "0x4A679253410272dd5232B3Ff7cF5dbB88f295319"
     }
 }
