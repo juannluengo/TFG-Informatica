@@ -1,0 +1,36 @@
+Attempting to connect to IPFS at: http://127.0.0.1:5001
+IPFS client initialized with API URL: http://127.0.0.1:5001
+Starting comprehensive simulation...
+Environment validated successfully
+IPFS connection successful. Version: 0.33.2
+Contracts initialized successfully
+
+1. Testing StudentDirectory Contract Functions...
+
+Registering new student...
+✗ Student registration failed: execution reverted: "Student already registered" (action="estimateGas", data="0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001a53747564656e7420616c72656164792072656769737465726564000000000000", reason="Student already registered", transaction={ "data": "0x5817e9d800000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c800000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000000044a6f686e000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003446f6500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005536d6974680000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010436f6d707574657220536369656e636500000000000000000000000000000000", "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", "to": "0x610178dA211FEF7D417bC0e6FeD39F05609AD788" }, invocation=null, revert={ "args": [ "Student already registered" ], "name": "Error", "signature": "Error(string)" }, code=CALL_EXCEPTION, version=6.13.5)
+
+Retrieving student information...
+✓ Student info retrieved: Result(5) [ 'Pedro', 'Picapiedra', '', 'Computer Science', true ]
+
+Deactivating student...
+✓ Student deactivated successfully
+
+Reactivating student...
+✓ Student reactivated successfully
+
+2. Testing AcademicRecords Contract Functions...
+
+Issuing new credential...
+Processing JSON data for IPFS upload, size: 50
+Attempting to upload to IPFS node...
+Successfully uploaded to IPFS node: QmYejkQTJzWNQaAwHhiH7R16MedVPtPUiNHRm4ZSD4eB4u
+✓ Credential issued successfully
+Transaction hash: 0x6b336198ccb5573a66f78a79a18c7a906d6862d165e17438deb1176ebd03b084
+
+3. Testing Admin Management...
+
+Adding new admin...
+✓ New admin added successfully
+
+Simulation completed successfully!

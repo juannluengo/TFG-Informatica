@@ -12,86 +12,48 @@ The system allows:
 
 ## Prerequisites
 
+Before starting, make sure you have installed:
 - [Node.js](https://nodejs.org/) (v16 or higher)
 - [IPFS](https://docs.ipfs.tech/install/command-line/) (for decentralized storage)
 - [MetaMask](https://metamask.io/) (browser extension)
 
 ## Quick Setup
 
-Follow these steps to get the system up and running:
-
-### 1. Clone and Install Dependencies
-
+1. Clone the repository:
 ```bash
-# Clone the repository
 git clone https://github.com/your-username/TFG-Informatica.git
 cd TFG-Informatica
-
-# Install dependencies
-./install-dependencies.sh
-# Or manually:
-npm install
-cd frontend && npm install && cd ..
-cd backend && npm install && cd ..
 ```
 
-### 2. Start the Local Blockchain
-
-Open a terminal and run:
-
+2. Make the setup script executable:
 ```bash
-npx hardhat node
+chmod +x start-all.sh
 ```
 
-Keep this terminal open throughout your session.
-
-### 3. Deploy Smart Contracts and Configure Environment
-
-In a new terminal, run:
-
+3. Run the setup script:
 ```bash
 ./start-all.sh
 ```
 
-This script will:
-- Deploy all necessary smart contracts
-- Update environment files with contract addresses
-- Optionally register test students when prompted
-- Provide instructions for the next steps
+The script will automatically:
+- Create all necessary environment files
+- Install dependencies for all components
+- Start a local Hardhat node
+- Deploy smart contracts
+- Update environment configurations
+- Optionally register test students
+- Start IPFS daemon (if not running)
+- Launch backend and frontend servers
 
-### 4. Start IPFS Daemon
-
-Open a new terminal and run:
-
-```bash
-ipfs daemon
-```
-
-Keep this terminal open throughout your session.
-
-### 5. Start Backend and Frontend
-
-As instructed by the setup script, in separate terminals run:
-
-```bash
-# Terminal 1 - Start backend
-cd backend && npm start
-
-# Terminal 2 - Start frontend
-cd frontend && npm start
-```
-
-### 6. Configure MetaMask
-
-1. Add Hardhat Network to MetaMask:
+4. Configure MetaMask:
    - Network Name: Hardhat Local
    - RPC URL: http://127.0.0.1:8545
    - Chain ID: 31337
    - Currency Symbol: ETH
-
-2. Import a test account:
-   - Copy a private key from the Hardhat node terminal
-   - In MetaMask: Click 'Import Account' and paste the private key
+   - Import the default test account:
+     ```
+     Private Key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+     ```
 
 ## Using the Application
 
@@ -109,39 +71,19 @@ cd frontend && npm start
    - Navigate to "Issue Credential"
    - Fill in the student's address and credential details
 
-## Testing
+## Monitoring and Cleanup
 
-Run the test suite with:
+- Check service status in the terminal where you ran `start-all.sh`
+- View logs in the generated log files:
+  - `hardhat.log`: Blockchain node logs
+  - `backend.log`: Backend server logs
+  - `frontend.log`: Frontend server logs
+  - `ipfs.log`: IPFS daemon logs
 
+To stop all services and clean up:
 ```bash
-./run-all-tests.sh
+./cleanup.sh
 ```
-
-Or run specific tests:
-
-```bash
-# Smart contract tests
-npx hardhat test test/AcademicRecords.test.js
-
-# IPFS integration tests
-npx hardhat test test/Ipfs.test.js
-```
-
-## Troubleshooting
-
-- **Contract Deployment Fails**
-  - Ensure Hardhat node is running
-  - Check you have sufficient test ETH
-  - Try restarting the Hardhat node
-
-- **IPFS Connection Issues**
-  - Verify IPFS daemon is running
-  - Check IPFS endpoint: http://localhost:5001
-
-- **Frontend Can't Connect**
-  - Verify contract addresses in .env files are correct
-  - Ensure MetaMask is connected to Hardhat network
-  - Check console for specific errors
 
 ## Project Structure
 
@@ -151,7 +93,7 @@ npx hardhat test test/Ipfs.test.js
 - `/scripts`: Deployment and utility scripts
 - `/test`: Test suite
 
-## Technologies Used
+## Technologies
 
 - **Blockchain**: Ethereum, Solidity, Hardhat
 - **Storage**: IPFS
