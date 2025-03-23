@@ -87,6 +87,11 @@ function VerifyCredential() {
       ...formData,
       recipientAddress: address
     });
+    
+    // When address is changed, clear any previous results/errors
+    setError('');
+    setVerificationResult(null);
+    setPdfDocument(null);
   };
 
   const handleSubmit = async (e) => {
@@ -411,8 +416,7 @@ function VerifyCredential() {
                 <StudentAddressSelector
                   value={formData.recipientAddress}
                   onChange={handleStudentAddressChange}
-                  label="Recipient Ethereum Address"
-                  disabled={loading}
+                  disableStudentList={true}
                   helperText={
                     checkingCredentials 
                       ? "Checking credentials..." 

@@ -17,7 +17,8 @@ const StudentAddressSelector = ({
   helperText, 
   disabled = false, 
   required = true, 
-  fullWidth = true 
+  fullWidth = true,
+  disableStudentList = false  // Add new prop to disable student list
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [options, setOptions] = useState([]);
@@ -26,8 +27,27 @@ const StudentAddressSelector = ({
   const [validationError, setValidationError] = useState(false);
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
 
+  // Validate the address
+  const isValidAddress = (address) => {
+    return address === '' || ethers.isAddress(address);
+  };
+
+  // Set initial input value when value changes
+  useEffect(() => {
+    if (value) {
+      setInputValue(value);
+    }
+  }, [value]);
+  
   // Fetch all students when the component mounts
   useEffect(() => {
+    // Skip fetching students if the list is disabled
+    if (disableStudentList) {
+      setHasAttemptedLoad(true);
+      setOptions([]);
+      return;
+    }
+    
     let isMounted = true; // Flag to prevent state updates after unmounting
     
     const fetchStudents = async () => {
@@ -90,29 +110,24 @@ const StudentAddressSelector = ({
 
   // Helper to find the option matching the current value
   const getSelectedOption = () => {
-    if (!value) return null;
+    if (!value || disableStudentList) return null;
     return options.find(option => option.address.toLowerCase() === value.toLowerCase()) || null;
-  };
-
-  // Validate the address when manually input
-  const isValidAddress = (address) => {
-    return address === '' || ethers.isAddress(address);
   };
 
   // When value changes externally, update validation status
   useEffect(() => {
-    // Only validate if it's not a selected student (manual entry)
-    if (value && !getSelectedOption()) {
+    if (value) {
       setValidationError(!isValidAddress(value));
     } else {
       setValidationError(false);
     }
-  }, [value, options]);
+  }, [value]);
 
   // Determine which helper text to show
   const getHelperText = () => {
     if (error) return error;
     if (validationError) return 'Invalid Ethereum address';
+    if (disableStudentList) return helperText || 'Enter an Ethereum address';
     if (hasAttemptedLoad && options.length === 0 && !loading) {
       return 'No students registered yet. You can enter an Ethereum address directly.';
     }
@@ -123,12 +138,41 @@ const StudentAddressSelector = ({
   // Custom "No Options" text based on whether we've loaded data
   const getNoOptionsText = () => {
     if (loading) return 'Loading...';
+    if (disableStudentList) return 'Enter an Ethereum address directly';
     if (hasAttemptedLoad && options.length === 0) {
       return 'No students registered. Enter an Ethereum address directly.';
     }
     return 'No options';
   };
 
+  // If student list is disabled, use a simple TextField instead of Autocomplete
+  if (disableStudentList) {
+    return (
+      <TextField
+        label={label}
+        value={value || ''}
+        onChange={(e) => {
+          const newValue = e.target.value;
+          setInputValue(newValue);
+          
+          // Validate the address
+          const isValid = isValidAddress(newValue);
+          setValidationError(newValue !== '' && !isValid);
+          
+          // Update parent component
+          onChange(newValue);
+        }}
+        error={!!error || validationError}
+        helperText={getHelperText()}
+        required={required}
+        fullWidth={fullWidth}
+        disabled={disabled}
+        placeholder="0x..."
+      />
+    );
+  }
+
+  // Otherwise use the Autocomplete component for student selection
   return (
     <Autocomplete
       value={getSelectedOption()}
@@ -138,13 +182,9 @@ const StudentAddressSelector = ({
         if (newValue) {
           // Selected from dropdown
           onChange(newValue.address);
-        } else if (inputValue) {
-          // Manual entry
-          const isValid = isValidAddress(inputValue);
-          setValidationError(!isValid);
-          if (isValid) {
-            onChange(inputValue);
-          }
+        } else if (inputValue && isValidAddress(inputValue)) {
+          // Manual entry - only update if valid
+          onChange(inputValue);
         } else {
           // Cleared
           onChange('');
@@ -153,13 +193,13 @@ const StudentAddressSelector = ({
       inputValue={inputValue}
       onInputChange={(event, newInputValue) => {
         setInputValue(newInputValue);
-        
-        // Only validate addresses that don't match any student names
+          
+        // Validate the address if it doesn't match any student
         if (!options.some(option => option.label === newInputValue)) {
           const isValid = isValidAddress(newInputValue);
           setValidationError(newInputValue !== '' && !isValid);
           
-          // Only update the value if it's valid or empty
+          // Update the value if it's valid or empty
           if (isValid) {
             onChange(newInputValue);
           }
@@ -219,10 +259,6 @@ const StudentAddressSelector = ({
                 {params.InputProps.endAdornment}
               </React.Fragment>
             ),
-          }}
-          onClick={() => {
-            // This ensures the dropdown opens on click, even if empty
-            params.inputProps.onClick && params.inputProps.onClick();
           }}
         />
       )}
